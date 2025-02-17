@@ -3,8 +3,9 @@ import pandas as pd
 import plotly.express as px
 from utils.data_loader import load_data
 import os
+os.system('pip install PyPDF2')
 import locale
-
+import PyPDF2
 
 from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
@@ -456,7 +457,7 @@ def load_all_pdfs(folder_path="raport"):
     for file in os.listdir(folder_path):
         if file.endswith(".pdf"):
             file_path = os.path.join(folder_path, file)
-            reader = PyPDF2.PdfReader(file_path)
+            reader = PdfReader(file_path)
             text = "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])
             text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=50)
             texts = text_splitter.split_text(text)
