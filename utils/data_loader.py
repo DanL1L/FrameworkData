@@ -1,18 +1,18 @@
 import pandas as pd
 import os
 
-def load_data(file_path = os.path.join(os.path.dirname(__file__), '../data/Data.xlsx')):
+def load_data(file_path=os.path.join(os.path.dirname(__file__), '../data/Data.xlsx')):
     """
     Încărcarea și procesarea datelor din fișierul Excel.
     :param file_path: Calea către fișierul Excel
-    :return: Două DataFrame-uri - unul pentru datele generale și altul pentru exporturi/reexporturi
+    :return: Trei DataFrame-uri - unul pentru datele generale, unul pentru exporturi/reexporturi și unul pentru influența exporturilor
     """
     
     # Verificăm foile disponibile în fișier
     sheets = pd.ExcelFile(file_path).sheet_names
-    required_sheets = ["Start_Data", "Exp_Reexp","Influenta_Export"]
+    required_sheets = ["Start_Data", "Exp_Reexp", "Influenta_Export"]
 
-    # Asigurăm că ambele foi există
+    # Asigurăm că toate foile necesare există
     for sheet in required_sheets:
         if sheet not in sheets:
             raise ValueError(f"Foaia '{sheet}' nu există în fișierul Excel. Foi disponibile: {sheets}")
@@ -20,6 +20,7 @@ def load_data(file_path = os.path.join(os.path.dirname(__file__), '../data/Data.
     # Încărcăm datele din fiecare foaie
     df_general = pd.read_excel(file_path, sheet_name="Start_Data")
     df_exp_reexp = pd.read_excel(file_path, sheet_name="Exp_Reexp")
+    df_influenta = pd.read_excel(file_path, sheet_name="Influenta_Export")
 
     # Preprocesare pentru "Start_Data"
     df_general["An"] = df_general["An"].fillna(method="ffill").astype("Int64")
@@ -32,6 +33,9 @@ def load_data(file_path = os.path.join(os.path.dirname(__file__), '../data/Data.
     df_exp_reexp = df_exp_reexp.dropna(subset=["Lună"])
     df_exp_reexp = df_exp_reexp[["An", "Lună", "Exporturi autohtone", "Reexporturi"]]
 
-    
+    # Preprocesare pentru "Influenta_Export"
+    df_influenta["An"] = df_influenta["An"].fillna(method="ffill").astype("Int64")
+    df_influenta = df_influenta.dropna(subset=["Lună", "Denumire"])
+    df_influenta = df_influenta[["An", "Lună", "Denumire", "Grad"]]
 
-    return df_general, df_exp_reexp
+    return df_general, df_exp_reexp, df_influenta
