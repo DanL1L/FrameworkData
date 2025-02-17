@@ -149,7 +149,7 @@ import_change = ((latest_data["Importuri (mil. $)"] - previous_data["Importuri (
 
 # Text start
 import locale
-locale.setlocale(locale.LC_NUMERIC, "en_US.UTF-8")  # Setăm formatul pentru numere
+locale.setlocale(locale.LC_NUMERIC)  # Setăm formatul pentru numere
 
 # Selectăm cea mai recentă perioadă și perioada anterioară
 latest_data = df_total.iloc[-1]
