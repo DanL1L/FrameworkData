@@ -4,7 +4,8 @@ import plotly.express as px
 from utils.data_loader import load_data
 import os
 import locale
-import PyPDF2
+
+
 from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.vectorstores import FAISS
@@ -449,14 +450,13 @@ st.plotly_chart(fig_influenta, use_container_width=True)
 
 
 
-
 # 📌 Funcție pentru a încărca și procesa toate fișierele PDF din "raport/"
 def load_all_pdfs(folder_path="raport"):
     all_texts = []
     for file in os.listdir(folder_path):
         if file.endswith(".pdf"):
             file_path = os.path.join(folder_path, file)
-            reader = PdfReader(file_path)
+            reader = PyPDF2.PdfReader(file_path)
             text = "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])
             text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=50)
             texts = text_splitter.split_text(text)
