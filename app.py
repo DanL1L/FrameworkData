@@ -6,12 +6,24 @@ import os
 import locale
 
 
-# from transformers import pipeline  # Importăm pipeline-ul Hugging Face
+# import PyPDF2
+# from transformers import pipeline
+# from langchain.text_splitter import RecursiveCharacterTextSplitter
+# from langchain.embeddings import OpenAIEmbeddings
+# from langchain.vectorstores import FAISS
+# from langchain.llms import HuggingFacePipeline
+# from langchain.chains import RetrievalQA
+
+from PyPDF2 import PdfReader
+from langchain.text_splitter import CharacterTextSplitter
+from langchain_community.vectorstores import FAISS
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.embeddings import HuggingFaceEmbeddings
 
 
 # Configurare Hugging Face API
-# MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.1"  # Model performant și gratuit
-# api_key = "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"  # Înlocuiește cu API Key generat
+MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.1"  # Model performant și gratuit
+api_key = "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"  # Înlocuiește cu API Key generat
 
 
 # Configurarea paginii
@@ -433,7 +445,7 @@ fig_influenta = px.bar(
     x="Grad",
     y="Denumire",
     orientation="h",
-    title=f"📊 Gradul de influență asupra exporturilor ({selected_month} {selected_year})",
+    title=f"Gradul de influență asupra exporturilor ({selected_month} {selected_year})",
     labels={"Grad": "Puncte procentuale (p.p.)", "Denumire": "Categorie de mărfuri"},
     color="Grad",
     color_continuous_scale="Blues_r",
@@ -443,30 +455,120 @@ fig_influenta = px.bar(
 # Afișare grafic
 st.plotly_chart(fig_influenta, use_container_width=True)
 
-# Dacă utilizatorul activează asistentul
+
+
+
+
+# 📌 Funcție pentru a încărca și procesa toate fișierele PDF din "raport/"
+def load_all_pdfs(folder_path="raport"):
+    all_texts = []
+    for file in os.listdir(folder_path):
+        if file.endswith(".pdf"):
+            file_path = os.path.join(folder_path, file)
+            reader = PdfReader(file_path)
+            text = "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])
+            text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+            texts = text_splitter.split_text(text)
+            all_texts.extend(texts)
+    return all_texts
+
+# 📌 Crearea vector store-ului FAISS
+def create_vector_store(texts):
+    model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")  # Model GRATUIT
+    vector_store = FAISS.from_texts(texts, model)
+    return vector_store
+
+# 📌 Căutare în documente
+def search_in_docs(query, vector_store):
+    results = vector_store.similarity_search(query, k=3)  # Caută cele mai relevante 3 răspunsuri
+    return results
+
+# 🔄 Încărcăm și procesăm toate documentele din "raport/"
+pdf_texts = load_all_pdfs()
+vector_store = create_vector_store(pdf_texts)
+
+
 if assistant_active:
     st.header("Asistent MDED – Analiză Economică")
-
-    # # Inițializare generator Hugging Face (o singură dată)
-    # @st.cache_resource
-    # def load_generator():
-    #     return pipeline("text-generation", model="bigscience/bloom-560m")
-
-    # generator = load_generator()
-
-    # Input utilizator
     user_input = st.text_area("Pune o întrebare despre economia Republicii Moldova:")
 
-    # Buton pentru generarea răspunsului
-    # if st.button("Analizează"):
-    #     if user_input:
-    #         with st.spinner("Generare răspuns..."):
-    #             response = generator(user_input, max_length=200, do_sample=True)[0]["generated_text"]
-    #         st.success("Răspuns generat:")
-    #         st.write(response)
-    #     else:
-    #         st.warning("Te rog să introduci o întrebare.")
-# Dacă utilizatorul activează asistentul
+    if st.button("Caută în documente"):
+        if user_input:
+            with st.spinner("Căutare..."):
+                results = search_in_docs(user_input, vector_store)
+
+            if results:
+                st.success("Răspunsuri relevante găsite:")
+                for res in results:
+                    st.write(f"- {res.page_content[:500]}...")  # Limităm textul la 300 caractere
+            else:
+                st.warning("Nu s-au găsit informații relevante în documente.")
+        else:
+            st.warning("Te rog să introduci o întrebare.")
+
+
+
+# def load_pdfs_from_folder(folder_path="raport"):
+#     """Încărcăm și citim conținutul fișierelor PDF din folderul raport"""
+#     pdf_texts = []
+    
+#     for filename in os.listdir(folder_path):
+#         if filename.endswith(".pdf"):
+#             file_path = os.path.join(folder_path, filename)
+#             with open(file_path, "rb") as pdf_file:
+#                 reader = PyPDF2.PdfReader(pdf_file)
+#                 text = ""
+#                 for page in reader.pages:
+#                     text += page.extract_text() + "\n"
+#                 pdf_texts.append({"filename": filename, "text": text})
+    
+#     return pdf_texts
+
+
+# def create_vector_store(pdf_texts):
+#     """Construim o bază de date pentru căutări eficiente pe baza documentelor"""
+#     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+#     texts = []
+#     for pdf in pdf_texts:
+#         texts.extend(text_splitter.split_text(pdf["text"]))
+    
+#     embeddings = OpenAIEmbeddings()  # Folosim OpenAI pentru embedding-uri textuale
+#     vector_store = FAISS.from_texts(texts, embeddings)
+#     return vector_store
+
+# @st.cache_resource
+# def load_chatbot(vector_store):
+#     """Încarcă modelul Hugging Face pentru întrebări pe baza documentelor"""
+#     retriever = vector_store.as_retriever(search_kwargs={"k": 5})  # Extragem 5 rezultate relevante
+#     hf_pipeline = pipeline("text-generation", model="bigscience/bloom-560m")  # Model Hugging Face
+#     llm = HuggingFacePipeline(pipeline=hf_pipeline)
+    
+#     qa_chain = RetrievalQA(llm=llm, retriever=retriever)
+#     return qa_chain
+
+# pdf_texts = load_pdfs_from_folder("raport")
+# vector_store = create_vector_store(pdf_texts)
+# qa_chain = load_chatbot(vector_store)
+
+
+
+
+# # Dacă utilizatorul activează asistentul
+# if assistant_active:
+#     st.header("📊 Asistent MDED – Analiză Economică bazată pe Rapoarte PDF")
+
+#     user_input = st.text_area("🔎 Pune o întrebare despre economia Republicii Moldova:")
+
+#     if st.button("Analizează"):
+#         if user_input:
+#             with st.spinner("📚 Căutare informații în rapoarte..."):
+#                 response = qa_chain.run(user_input)
+            
+#             st.success("📌 Răspuns generat:")
+#             st.write(response)
+#         else:
+#             st.warning("⚠️ Te rog să introduci o întrebare.")
+# # Dacă utilizatorul activează asistentul
 
 
 # Adăugare Footer
