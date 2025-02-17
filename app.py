@@ -20,7 +20,7 @@ st.set_page_config(page_title='Macroeconomic', layout='wide')
 # Creare layout cu logo și titlu pe același rând
 col1, col2 = st.columns([1, 4])  # Prima coloană mai mică pentru logo, a doua mai mare pentru text
 
-# with col1:
+with col1:
     logo_path = os.path.join(os.getcwd(), "data", "logo.svg")
     st.image(logo_path, width=200)
 
