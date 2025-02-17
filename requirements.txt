@@ -1,7 +1,4 @@
-pandas
-scikit-learn
-seaborn
-matplotlib
 streamlit
+pandas
 plotly
 openpyxl
