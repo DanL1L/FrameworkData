@@ -4,7 +4,7 @@ import plotly.express as px
 from utils.data_loader import load_data
 import os
 import locale
-
+import PyPDF2
 from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.vectorstores import FAISS
