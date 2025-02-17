@@ -21,7 +21,7 @@ st.set_page_config(page_title='Macroeconomic', layout='wide')
 col1, col2 = st.columns([1, 4])  # Prima coloană mai mică pentru logo, a doua mai mare pentru text
 
 # with col1:
-     st.image("data/logo.svg", width=200)  # Ajustează calea dacă este necesar
+    st.image("data/logo.svg", width=200)  # Ajustează calea dacă este necesar
 
 
 with col2:
