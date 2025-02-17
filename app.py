@@ -6,7 +6,6 @@ import os
 os.system('pip install PyPDF2')
 os.system('pip install langchain langchain-community')
 os.system('pip install sentence-transformers transformers torch')
-os.system("pip install --no-cache-dir sentence-transformers transformers torch")
 import locale
 import PyPDF2
 
