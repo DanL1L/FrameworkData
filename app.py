@@ -4,6 +4,8 @@ import plotly.express as px
 from utils.data_loader import load_data
 import os
 os.system('pip install PyPDF2')
+os.system('pip install langchain langchain-community')
+os.system("pip install --no-cache-dir sentence-transformers transformers torch")
 import locale
 import PyPDF2
 
@@ -12,7 +14,7 @@ from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_community.document_loaders import PyPDFLoader
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from sentence_transformers import SentenceTransformer
 
 
 # Configurare Hugging Face API
@@ -467,8 +469,8 @@ def load_all_pdfs(folder_path="raport"):
 
 # 📌 Crearea vector store-ului FAISS
 def create_vector_store(texts):
-    model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")  # Model GRATUIT
-    vector_store = FAISS.from_texts(texts, model)
+    model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+    vector_store = FAISS.from_texts([t.page_content for t in texts], model.encode)
     return vector_store
 
 # 📌 Căutare în documente
