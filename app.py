@@ -2,6 +2,17 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from utils.data_loader import load_data
+import os
+import locale
+
+
+# from transformers import pipeline  # Importăm pipeline-ul Hugging Face
+
+
+# Configurare Hugging Face API
+# MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.1"  # Model performant și gratuit
+# api_key = "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"  # Înlocuiește cu API Key generat
+
 
 # Configurarea paginii
 st.set_page_config(page_title='Macroeconomic', layout='wide')
@@ -19,8 +30,8 @@ st.set_page_config(page_title='Macroeconomic', layout='wide')
 col1, col2 = st.columns([1, 4])  # Prima coloană mai mică pentru logo, a doua mai mare pentru text
 
 with col1:
-    st.image("data/logo.svg", width=200  )  # Ajustează calea dacă este necesar
-
+     logo_path = os.path.join(os.getcwd(), "data", "logo.svg")
+     st.image(logo_path, width=200)
 
 with col2:
     st.markdown("""
@@ -35,13 +46,28 @@ with col2:
 st.markdown("<hr>", unsafe_allow_html=True)
 
 # Încărcarea datelor
-df, df_exports = load_data()
+df, df_exports, df_influenta  = load_data()
 
 month_mapping = {
     "Ianuarie": 1, "Februarie": 2, "Martie": 3, "Aprilie": 4,
     "Mai": 5, "Iunie": 6, "Iulie": 7, "August": 8,
     "Septembrie": 9, "Octombrie": 10, "Noiembrie": 11, "Decembrie": 12
 }
+
+# Dicționar de mapare a lunilor la valori numerice
+month_order = {
+    "Ianuarie": 0,  # Facem "Ianuarie" prima
+    "Ianuarie - Februarie": 11, "Ianuarie - Martie": 10, "Ianuarie - Aprilie": 9,
+    "Ianuarie - Mai": 8, "Ianuarie - Iunie": 7, "Ianuarie - Iulie": 6, "Ianuarie - August": 5,
+    "Ianuarie - Septembrie": 4, "Ianuarie - Octombrie": 3, "Ianuarie - Noiembrie": 2, "Ianuarie - Decembrie": 1
+}
+
+month_order_chart = {
+    "Ianuarie": 0, "Ianuarie - Februarie": 1, "Ianuarie - Martie": 2, "Ianuarie - Aprilie": 3,
+    "Ianuarie - Mai": 4, "Ianuarie - Iunie": 5, "Ianuarie - Iulie": 6, "Ianuarie - August": 7,
+    "Ianuarie - Septembrie": 8, "Ianuarie - Octombrie": 9, "Ianuarie - Noiembrie": 10, "Ianuarie - Decembrie": 11
+}
+
 
 # Verificăm dacă există date    
 if df.empty:
@@ -54,13 +80,20 @@ df = df.astype({"An": "str", "Lună": "str", "Trimestru": "str", "Semestru": "st
 
 # Sidebar pentru selecții
 st.sidebar.header("Filtre")
-selected_period = st.sidebar.selectbox("Selectează perioada:", ["Lunar", "Trimestrial", "Anual"])
+# Adăugare FILTRU pentru selecția anului
+selected_year = st.sidebar.selectbox("Selectează anul:",sorted(df["An"].unique(), reverse=True))
+
+
+selected_period = st.sidebar.selectbox("Selectează perioada:", ["Lunară"])
 selected_indicator = st.sidebar.selectbox("Selectează indicatorul:", ["Exporturi (mil. $)", "Importuri (mil. $)", "Sold Comercial (mil. $)"])
 selected_country = st.sidebar.selectbox("Selectează țara:", ["Toate"] + list(df["Țară"].unique()))
 selected_group = st.sidebar.selectbox("Selectează grupul de țări:", ["Toate", "UE", "CSI", "Restul lumii"])
 selected_month = st.sidebar.selectbox("Selectează perioada:", df["Lună"].unique())
-
+assistant_active = st.sidebar.checkbox("Activare Asistent MDED")
 # Filtrare după țară dacă este selectată una
+if selected_year != "Toți":
+    df = df[df["An"] == selected_year]
+
 if selected_country != "Toate":
     df = df[df["Țară"] == selected_country]
 
@@ -82,20 +115,86 @@ else:
 for col in ["Exporturi (mil. $)", "Importuri (mil. $)", "Sold Comercial (mil. $)"]:
     if col in df.columns:
         df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+ 
+# # 📌 Definirea ordinii lunilor pentru sortare corectă
+# month_order1 = {
+#     "Ianuarie": 0, "Ianuarie - Februarie": 1, "Ianuarie - Martie": 2, "Ianuarie - Aprilie": 3,
+#     "Ianuarie - Mai": 4, "Ianuarie - Iunie": 5, "Ianuarie - Iulie": 6, "Ianuarie - August": 7,
+#     "Ianuarie - Septembrie": 8, "Ianuarie - Octombrie": 9, "Ianuarie - Noiembrie": 10, "Ianuarie - Decembrie": 11
+# }
+
+# # 🟢 Agregare datelor
+# df_grouped = df.groupby(["Perioadă", "Țară"])[selected_indicator].sum().reset_index()
+# df_total = df.groupby(["Perioadă"])[["Exporturi (mil. $)", "Importuri (mil. $)", "Sold Comercial (mil. $)"]].sum().reset_index()
+
+# # 🔄 Redenumire perioadelor pentru a păstra doar ultima lună
+# def rename_period(period):
+#     return period.split(" - ")[-1] if " - " in period else period
+
+# df_total["Perioadă"] = df_total["Perioadă"].apply(rename_period)
+
+# # 📌 Aplicăm sortarea corectă
+# df_total["Ordin"] = df_total["Perioadă"].map(month_order1)
+# df_total = df_total.sort_values(by=["Ordin"])
+
+# # 📊 Calcularea valorilor lunare
+# df_total["Valoare Lunară"] = df_total[selected_indicator].copy()  
+# df_total["Valoare Lunară"] = df_total[selected_indicator] - df_total[selected_indicator].shift(1)
+
+# # 🏆 Asigurăm că Ianuarie ia valoarea corectă din dataset
+# df_total.loc[df_total["Ordin"] == 0, "Valoare Lunară"] = df_total.loc[df_total["Ordin"] == 0, selected_indicator]
+
+# # 🔹 Creăm tabelul transpus pentru afișare
+# df_lunar = df_total[["Perioadă", "Valoare Lunară"]].rename(columns={"Perioadă": "Lună"})
+# df_lunar = df_lunar.set_index("Lună").T  
+
+# # 📊 Afișare tabel în Streamlit
+# st.subheader("📊 Tabel cu valorile lunare calculate")
+# st.dataframe(df_lunar, use_container_width=True)
+
+# # 📈 Creare grafic de evoluție
+# st.subheader(f"Evoluția lunară a {selected_indicator} (Perioadă - {selected_period}) ")
+# fig = px.bar(df_total, x="Perioadă", y="Valoare Lunară",
+#              title=f"Evoluția lunară a {selected_indicator}",
+#              labels={"Valoare Lunară": "Valoare (mil. $)"}, barmode='relative')
+
+# # 🔥 Afișare grafic
+# st.plotly_chart(fig, use_container_width=True, key="fig_monthly")
+
+
 
 # Agregare
+month_order1 = {
+    "Ianuarie": 0, "Ianuarie - Februarie": 1, "Ianuarie - Martie": 2, "Ianuarie - Aprilie": 3,
+    "Ianuarie - Mai": 4, "Ianuarie - Iunie": 5, "Ianuarie - Iulie": 6, "Ianuarie - August": 7,
+    "Ianuarie - Septembrie": 8, "Ianuarie - Octombrie": 9, "Ianuarie - Noiembrie": 10, "Ianuarie - Decembrie": 11
+}
+# 🔄 Redenumirea perioadelor pentru a păstra doar ultima lună
+def rename_period(period):
+    return period.split(" - ")[-1] if " - " in period else period
+
+# 🟢 Agregare date
 df_grouped = df.groupby(["Perioadă", "Țară"])[selected_indicator].sum().reset_index()
 df_total = df.groupby(["Perioadă"])[["Exporturi (mil. $)", "Importuri (mil. $)", "Sold Comercial (mil. $)"]].sum().reset_index()
 
-df_total = df_total.sort_values(by=["Perioadă"], ascending=True)
+# 🔄 Aplicăm redenumirea perioadelor
+df_total["Perioadă"] = df_total["Perioadă"].apply(rename_period)
 
+# 📌 Sortăm în funcție de ordinea corectă a lunilor
+df_total["Ordin"] = df_total["Perioadă"].map(month_order1)
+df_total = df_total.sort_values(by=["Ordin"])
 
-# Afișare grafic principal - Total agregat fără divizări
+# 📊 Afișare grafic ordonat corect
 st.subheader(f"Evoluția {selected_indicator} ({selected_period})")
-fig = px.bar(df_total, x="Perioadă", y=selected_indicator, title=f"{selected_indicator} în timp", 
-             labels={selected_indicator: "Valoare (mil. $)"}, barmode='relative')
-             
-st.plotly_chart(fig, use_container_width=True)
+fig = px.bar(df_total, x="Perioadă", y=selected_indicator,
+             title=f"{selected_indicator} în timp",
+             labels={selected_indicator: "Valoare (mil. $)"},
+             barmode='relative')
+
+st.plotly_chart(fig, use_container_width=False)
+
+
+
 
 # Filtrare pentru luna selectată
 df_month = df[df["Lună"] == selected_month]
@@ -139,8 +238,11 @@ import_change = ((latest_data["Importuri (mil. $)"] - previous_data["Importuri (
 
 
 # Text start
-import locale
-locale.setlocale(locale.LC_NUMERIC, "en_US.UTF-8")  # Setăm formatul pentru numere
+
+def format_value(value):
+    return locale.format_string("%.1f", value / 1000, grouping=True)
+
+locale.setlocale(locale.LC_NUMERIC)  # Setăm formatul pentru numere
 
 # Selectăm cea mai recentă perioadă și perioada anterioară
 latest_data = df_total.iloc[-1]
@@ -156,23 +258,47 @@ export_change_pct = (export_change_abs / abs(previous_data["Exporturi (mil. $)"]
 import_change_pct = (import_change_abs / abs(previous_data["Importuri (mil. $)"]) * 100) if previous_data["Importuri (mil. $)"] != 0 else 0
 
 # Formatarea numerelor
-total_trade_value = locale.format_string("%.1f", (latest_data["Exporturi (mil. $)"] + latest_data["Importuri (mil. $)"]) / 1000, grouping=True)
-export_change_value = locale.format_string("%.1f", export_change_abs, grouping=True)
-import_change_value = locale.format_string("%.1f", import_change_abs, grouping=True)
-trade_balance_value = locale.format_string("%.1f", trade_balance_change_abs, grouping=True)
+total_trade_value = format_value(latest_data["Exporturi (mil. $)"] + latest_data["Importuri (mil. $)"])
+export_change_value = format_value(export_change_abs)
+import_change_value = format_value(import_change_abs)
+trade_balance_value = format_value(trade_balance_change_abs)
 
-# Generare text descriptiv dinamic
-description_text = (
-    f"**Valoarea totală a schimburilor comerciale cu mărfuri în {selected_month} a fost de {total_trade_value} mil. dolari**, "
-    f"înregistrând o {'creștere' if trade_balance_change_pct > 0 else 'scădere'} de {abs(trade_balance_change_pct):.1f}% față de {previous_data['Perioadă']}. "
-    f"Exporturile s-au {'majorat' if export_change_pct > 0 else 'diminuat'} cu {export_change_value} mil. dolari ({export_change_pct:+.1f}%), "
-    f"iar importurile s-au {'majorat' if import_change_pct > 0 else 'diminuat'} cu {import_change_value} mil. dolari ({import_change_pct:+.1f}%). "
-    f"În rezultat, deficitul balanței comerciale s-a {'majorat' if trade_balance_change_abs > 0 else 'micșorat'} cu {trade_balance_value} mil. dolari."
-)
 
-st.markdown(f"**{description_text}**")
+def generate_description(selected_month, latest_data, previous_data):
+    trade_balance_change_pct = (latest_data["Sold Comercial (mil. $)"] - previous_data["Sold Comercial (mil. $)"]) / abs(previous_data["Sold Comercial (mil. $)"]) * 100 if previous_data["Sold Comercial (mil. $)"] != 0 else 0
+    export_change_pct = (latest_data["Exporturi (mil. $)"] - previous_data["Exporturi (mil. $)"]) / abs(previous_data["Exporturi (mil. $)"]) * 100 if previous_data["Exporturi (mil. $)"] != 0 else 0
+    import_change_pct = (latest_data["Importuri (mil. $)"] - previous_data["Importuri (mil. $)"]) / abs(previous_data["Importuri (mil. $)"]) * 100 if previous_data["Importuri (mil. $)"] != 0 else 0
+
+    return f"""
+    **Valoarea totală a schimburilor comerciale în {selected_month}** a fost de **{format_value(latest_data["Exporturi (mil. $)"] + latest_data["Importuri (mil. $)"])} mil. dolari** în anul **{selected_year}**, 
+    înregistrând o {'creștere' if trade_balance_change_pct > 0 else 'scădere'} de {abs(trade_balance_change_pct):.1f}% față de **aceeași perioadă** a anului trecut. 
+    Exporturile s-au {'majorat' if export_change_pct > 0 else 'diminuat'} cu **{format_value(latest_data["Exporturi (mil. $)"] - previous_data["Exporturi (mil. $)"])} mil. dolari** ({export_change_pct:+.1f}%), 
+    iar importurile s-au {'majorat' if import_change_pct > 0 else 'diminuat'} cu **{format_value(latest_data["Importuri (mil. $)"] - previous_data["Importuri (mil. $)"])} mil. dolari** ({import_change_pct:+.1f}%). 
+    Deficitul balanței comerciale s-a {'majorat' if (latest_data["Sold Comercial (mil. $)"] - previous_data["Sold Comercial (mil. $)"]) > 0 else 'micșorat'} 
+    cu **{format_value(latest_data["Sold Comercial (mil. $)"] - previous_data["Sold Comercial (mil. $)"])} mil. dolari.**
+    """
+
+st.markdown(generate_description(selected_month, latest_data, previous_data))
 
 # Text finish
+
+
+
+# Aplicăm mapping-ul pentru a avea valori numerice asociate perioadelor
+df_total["Sort_Index"] = df_total["Perioadă"].map(month_order)
+
+# Asigurăm că valorile nespecificate primesc un index mare pentru a fi plasate la final
+df_total["Sort_Index"] = df_total["Sort_Index"].fillna(99)
+
+# Sortare după index-ul definit (crescător, cu "Ianuarie" prima)
+df_total = df_total.sort_values(by="Sort_Index", ascending=False).drop(columns=["Sort_Index"])
+
+# Afișare grafic principal - Total agregat fără divizări
+st.subheader(f"Evoluția {selected_indicator} (Perioadă - {selected_period})")
+fig = px.bar(df_total, x="Perioadă", y=selected_indicator, title=f"{selected_indicator} în timp", 
+             labels={selected_indicator: "Valoare (mil. $)"}, barmode='relative')
+
+st.plotly_chart(fig, use_container_width=True, key="fig_total_export")
 
 
 
@@ -251,12 +377,6 @@ fig_donut.update_traces(
 # Afișarea graficului
 st.plotly_chart(fig_donut, use_container_width=True)
 
-
-
-
-
-
-
 # Adăugare diagramă Waterfall pentru balanța comercială totală
 # if "Sold Comercial (mil. $)" in df_total.columns and not df_total["Sold Comercial (mil. $)"].isnull().all():
 #     st.subheader("Contribuția fiecărei perioade la Balanța Comercială Totală")
@@ -275,6 +395,79 @@ st.plotly_chart(fig_donut, use_container_width=True)
 # Afișare tabel pe toată lățimea ecranului
 st.subheader("Tabel Date")
 st.dataframe(df_grouped, use_container_width=True)
+
+
+
+# Gradul de influenta
+# Eliminăm spațiile extra din coloana "Lună"
+df_influenta["Lună"] = df_influenta["Lună"].str.strip()
+
+# Afișăm lunile disponibile pentru debugging
+# st.write("Valori unice în coloana 'Lună' după curățare:", df_influenta["Lună"].unique())
+
+# Aplicăm filtrarea corectă
+df_influenta_filtered = df_influenta[
+    (df_influenta["Lună"] == selected_month) & 
+    (df_influenta["An"].astype(str) == str(selected_year))
+]
+
+# Verificăm rezultatele filtrării
+# st.write(f"📊 Datele filtrate pentru {selected_month} {selected_year}:")
+# st.dataframe(df_influenta_filtered)
+
+# Dacă nu există date, afișăm o eroare clară
+if df_influenta_filtered.empty:
+    st.error(f" Nu sunt date pentru perioada selectată **{selected_month} {selected_year}.**")
+    st.stop()
+
+# Convertim "Grad" în numeric și eliminăm NaN
+df_influenta_filtered["Grad"] = pd.to_numeric(df_influenta_filtered["Grad"], errors="coerce")
+df_influenta_filtered = df_influenta_filtered.dropna(subset=["Grad"])
+
+# Sortare pentru vizualizare corectă
+df_influenta_filtered = df_influenta_filtered.sort_values(by="Grad", ascending=False)
+
+# Creare diagramă cu bare orizontale
+fig_influenta = px.bar(
+    df_influenta_filtered,
+    x="Grad",
+    y="Denumire",
+    orientation="h",
+    title=f"📊 Gradul de influență asupra exporturilor ({selected_month} {selected_year})",
+    labels={"Grad": "Puncte procentuale (p.p.)", "Denumire": "Categorie de mărfuri"},
+    color="Grad",
+    color_continuous_scale="Blues_r",
+    height=600
+)
+
+# Afișare grafic
+st.plotly_chart(fig_influenta, use_container_width=True)
+
+# Dacă utilizatorul activează asistentul
+if assistant_active:
+    st.header("Asistent MDED – Analiză Economică")
+
+    # # Inițializare generator Hugging Face (o singură dată)
+    # @st.cache_resource
+    # def load_generator():
+    #     return pipeline("text-generation", model="bigscience/bloom-560m")
+
+    # generator = load_generator()
+
+    # Input utilizator
+    user_input = st.text_area("Pune o întrebare despre economia Republicii Moldova:")
+
+    # Buton pentru generarea răspunsului
+    # if st.button("Analizează"):
+    #     if user_input:
+    #         with st.spinner("Generare răspuns..."):
+    #             response = generator(user_input, max_length=200, do_sample=True)[0]["generated_text"]
+    #         st.success("Răspuns generat:")
+    #         st.write(response)
+    #     else:
+    #         st.warning("Te rog să introduci o întrebare.")
+# Dacă utilizatorul activează asistentul
+
 
 # Adăugare Footer
 st.markdown("""
