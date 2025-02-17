@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from utils.data_loader import load_data
-
+import os
 import calendar
 
 # Configurarea paginii
@@ -21,7 +21,8 @@ st.set_page_config(page_title='Macroeconomic', layout='wide')
 col1, col2 = st.columns([1, 4])  # Prima coloană mai mică pentru logo, a doua mai mare pentru text
 
 # with col1:
-    st.image("data/logo.svg", width=200)  # Ajustează calea dacă este necesar
+    logo_path = os.path.join(os.getcwd(), "data", "logo.svg")
+    st.image(logo_path, width=200)
 
 
 with col2:
