@@ -133,7 +133,7 @@ col1, col2 = st.columns(2)
 
 # Top 10 țări pentru importuri în coloana stângă
 with col1:
-    st.subheader(f"Top 10 Țări - Importuri **{selected_month}**")
+    st.subheader(f"Top 10 Țări - Importuri, **[{selected_month}]**")
     df_top_import = df_month.sort_values(by="Importuri (mil. $)", ascending=False).head(10)
     other_import_value = df_month["Importuri (mil. $)"].sum() - df_top_import["Importuri (mil. $)"].sum()
     df_top_import = pd.concat([df_top_import, pd.DataFrame([{"Țară": "Altele", "Importuri (mil. $)": other_import_value}])], ignore_index=True)
@@ -144,7 +144,7 @@ with col1:
 
 # Top 10 țări pentru exporturi în coloana dreaptă
 with col2:
-    st.subheader(f"Top 10 Țări - Exporturi  **{selected_month}**")
+    st.subheader(f"Top 10 Țări - Exporturi, **{selected_month}**")
     df_top_export = df_month.sort_values(by="Exporturi (mil. $)", ascending=False).head(10)
     other_export_value = df_month["Exporturi (mil. $)"].sum() - df_top_export["Exporturi (mil. $)"].sum()
     df_top_export = pd.concat([df_top_export, pd.DataFrame([{"Țară": "Altele", "Exporturi (mil. $)": other_export_value}])], ignore_index=True)
