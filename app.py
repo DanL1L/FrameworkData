@@ -124,86 +124,7 @@ for col in ["Exporturi (mil. $)", "Importuri (mil. $)", "Sold Comercial (mil. $)
     if col in df.columns:
         df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
  
-# # 📌 Definirea ordinii lunilor pentru sortare corectă
-# month_order1 = {
-#     "Ianuarie": 0, "Ianuarie - Februarie": 1, "Ianuarie - Martie": 2, "Ianuarie - Aprilie": 3,
-#     "Ianuarie - Mai": 4, "Ianuarie - Iunie": 5, "Ianuarie - Iulie": 6, "Ianuarie - August": 7,
-#     "Ianuarie - Septembrie": 8, "Ianuarie - Octombrie": 9, "Ianuarie - Noiembrie": 10, "Ianuarie - Decembrie": 11
-# }
-
-# # 🟢 Agregare datelor
-# df_grouped = df.groupby(["Perioadă", "Țară"])[selected_indicator].sum().reset_index()
-# df_total = df.groupby(["Perioadă"])[["Exporturi (mil. $)", "Importuri (mil. $)", "Sold Comercial (mil. $)"]].sum().reset_index()
-
-# # 🔄 Redenumire perioadelor pentru a păstra doar ultima lună
-# def rename_period(period):
-#     return period.split(" - ")[-1] if " - " in period else period
-
-# df_total["Perioadă"] = df_total["Perioadă"].apply(rename_period)
-
-# # 📌 Aplicăm sortarea corectă
-# df_total["Ordin"] = df_total["Perioadă"].map(month_order1)
-# df_total = df_total.sort_values(by=["Ordin"])
-
-# # 📊 Calcularea valorilor lunare
-# df_total["Valoare Lunară"] = df_total[selected_indicator].copy()  
-# df_total["Valoare Lunară"] = df_total[selected_indicator] - df_total[selected_indicator].shift(1)
-
-# # 🏆 Asigurăm că Ianuarie ia valoarea corectă din dataset
-# df_total.loc[df_total["Ordin"] == 0, "Valoare Lunară"] = df_total.loc[df_total["Ordin"] == 0, selected_indicator]
-
-# # 🔹 Creăm tabelul transpus pentru afișare
-# df_lunar = df_total[["Perioadă", "Valoare Lunară"]].rename(columns={"Perioadă": "Lună"})
-# df_lunar = df_lunar.set_index("Lună").T  
-
-# # 📊 Afișare tabel în Streamlit
-# st.subheader("📊 Tabel cu valorile lunare calculate")
-# st.dataframe(df_lunar, use_container_width=True)
-
-# # 📈 Creare grafic de evoluție
-# st.subheader(f"Evoluția lunară a {selected_indicator} (Perioadă - {selected_period}) ")
-# fig = px.bar(df_total, x="Perioadă", y="Valoare Lunară",
-#              title=f"Evoluția lunară a {selected_indicator}",
-#              labels={"Valoare Lunară": "Valoare (mil. $)"}, barmode='relative')
-
-# # 🔥 Afișare grafic
-# st.plotly_chart(fig, use_container_width=True, key="fig_monthly")
-
-
-
-# Agregare
-month_order1 = {
-    "Ianuarie": 0, "Ianuarie - Februarie": 1, "Ianuarie - Martie": 2, "Ianuarie - Aprilie": 3,
-    "Ianuarie - Mai": 4, "Ianuarie - Iunie": 5, "Ianuarie - Iulie": 6, "Ianuarie - August": 7,
-    "Ianuarie - Septembrie": 8, "Ianuarie - Octombrie": 9, "Ianuarie - Noiembrie": 10, "Ianuarie - Decembrie": 11
-}
-# 🔄 Redenumirea perioadelor pentru a păstra doar ultima lună
-def rename_period(period):
-    return period.split(" - ")[-1] if " - " in period else period
-
-# 🟢 Agregare date
 df_grouped = df.groupby(["Perioadă", "Țară"])[selected_indicator].sum().reset_index()
-df_total = df.groupby(["Perioadă"])[["Exporturi (mil. $)", "Importuri (mil. $)", "Sold Comercial (mil. $)"]].sum().reset_index()
-
-# 🔄 Aplicăm redenumirea perioadelor
-df_total["Perioadă"] = df_total["Perioadă"].apply(rename_period)
-
-# 📌 Sortăm în funcție de ordinea corectă a lunilor
-df_total["Ordin"] = df_total["Perioadă"].map(month_order1)
-df_total = df_total.sort_values(by=["Ordin"])
-
-# 📊 Afișare grafic ordonat corect
-st.subheader(f"Evoluția {selected_indicator} ({selected_period})")
-fig = px.bar(df_total, x="Perioadă", y=selected_indicator,
-             title=f"{selected_indicator} în timp",
-             labels={selected_indicator: "Valoare (mil. $)"},
-             barmode='relative')
-
-st.plotly_chart(fig, use_container_width=False)
-
-
-
-
 # Filtrare pentru luna selectată
 df_month = df[df["Lună"] == selected_month]
 
@@ -310,9 +231,6 @@ st.plotly_chart(fig, use_container_width=True, key="fig_total_export")
 
 
 
-
-
-
 # Step 2: Strip any extra whitespace from the strings
 df_exports["Lună"] = df_exports["Lună"].str.strip()
 
@@ -351,11 +269,6 @@ fig_exp.update_layout(
 st.plotly_chart(fig_exp, use_container_width=True)
 
 
-
-
-
-
-
 # Filtrare date în funcție de luna selectată
 df_filtered = df[df["Lună"] == selected_month]
 
@@ -385,19 +298,6 @@ fig_donut.update_traces(
 # Afișarea graficului
 st.plotly_chart(fig_donut, use_container_width=True)
 
-# Adăugare diagramă Waterfall pentru balanța comercială totală
-# if "Sold Comercial (mil. $)" in df_total.columns and not df_total["Sold Comercial (mil. $)"].isnull().all():
-#     st.subheader("Contribuția fiecărei perioade la Balanța Comercială Totală")
-#     df_total["Tip"] = df_total["Sold Comercial (mil. $)"].apply(lambda x: "Surplus" if x > 0 else "Deficit")
-
-#     fig_waterfall = px.bar(df_total, x="Perioadă", y="Sold Comercial (mil. $)", 
-#                            title="Balanța Comercială Totală - Contribuție pe Perioade",
-#                            labels={"Sold Comercial (mil. $)": "Mil. $"},
-#                            color="Tip",
-#                            color_discrete_map={"Surplus": "green", "Deficit": "red"})
-#     st.plotly_chart(fig_waterfall, use_container_width=True)
-# else:
-#     st.warning("Nu există date pentru Balanța Comercială Totală în perioada selectată.")
 
 
 # Afișare tabel pe toată lățimea ecranului
