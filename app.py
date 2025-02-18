@@ -369,7 +369,7 @@ def load_all_pdfs(folder_path="raport"):
 
 # 📌 Crearea vector store-ului FAISS
 def create_vector_store(texts):
-    model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")  # Model GRATUIT
+    model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2") 
     vector_store = FAISS.from_texts(texts, model)
     return vector_store
 
