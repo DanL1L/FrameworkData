@@ -133,7 +133,7 @@ col1, col2 = st.columns(2)
 
 # Top 10 țări pentru importuri în coloana stângă
 with col1:
-    st.subheader(f"Top 10 Țări - Importuri, **[{selected_month}]**")
+    st.subheader(f"Top 10 Țări - Importuri, **{selected_month}**")
     df_top_import = df_month.sort_values(by="Importuri (mil. $)", ascending=False).head(10)
     other_import_value = df_month["Importuri (mil. $)"].sum() - df_top_import["Importuri (mil. $)"].sum()
     df_top_import = pd.concat([df_top_import, pd.DataFrame([{"Țară": "Altele", "Importuri (mil. $)": other_import_value}])], ignore_index=True)
@@ -320,7 +320,7 @@ df_influenta_filtered = df_influenta[
 ]
 
 # Verificăm rezultatele filtrării
-# st.write(f"📊 Datele filtrate pentru {selected_month} {selected_year}:")
+# st.write(f"Datele filtrate pentru {selected_month} {selected_year}:")
 # st.dataframe(df_influenta_filtered)
 
 # Dacă nu există date, afișăm o eroare clară
@@ -354,7 +354,7 @@ st.plotly_chart(fig_influenta, use_container_width=True)
 
 
 
-# 📌 Funcție pentru a încărca și procesa toate fișierele PDF din "raport/"
+# Funcție pentru a încărca și procesa toate fișierele PDF din "raport/"
 def load_all_pdfs(folder_path="raport"):
     all_texts = []
     for file in os.listdir(folder_path):
@@ -367,18 +367,18 @@ def load_all_pdfs(folder_path="raport"):
             all_texts.extend(texts)
     return all_texts
 
-# 📌 Crearea vector store-ului FAISS
+# Crearea vector store-ului FAISS
 def create_vector_store(texts):
     model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2") 
     vector_store = FAISS.from_texts(texts, model)
     return vector_store
 
-# 📌 Căutare în documente
+# Căutare în documente
 def search_in_docs(query, vector_store):
     results = vector_store.similarity_search(query, k=3)  # Caută cele mai relevante 3 răspunsuri
     return results
 
-# 🔄 Încărcăm și procesăm toate documentele din "raport/"
+# Încărcăm și procesăm toate documentele din "raport/"
 pdf_texts = load_all_pdfs()
 vector_store = create_vector_store(pdf_texts)
 
@@ -387,7 +387,7 @@ if assistant_active:
     st.header("Asistent MDED – Analiză Economică")
     user_input = st.text_area("Pune o întrebare despre economia Republicii Moldova:")
 
-    if st.button("Caută în documente"):
+    if st.button("Caută"):
         if user_input:
             with st.spinner("Căutare..."):
                 results = search_in_docs(user_input, vector_store)
@@ -402,71 +402,6 @@ if assistant_active:
             st.warning("Te rog să introduci o întrebare.")
 
 
-
-# def load_pdfs_from_folder(folder_path="raport"):
-#     """Încărcăm și citim conținutul fișierelor PDF din folderul raport"""
-#     pdf_texts = []
-    
-#     for filename in os.listdir(folder_path):
-#         if filename.endswith(".pdf"):
-#             file_path = os.path.join(folder_path, filename)
-#             with open(file_path, "rb") as pdf_file:
-#                 reader = PyPDF2.PdfReader(pdf_file)
-#                 text = ""
-#                 for page in reader.pages:
-#                     text += page.extract_text() + "\n"
-#                 pdf_texts.append({"filename": filename, "text": text})
-    
-#     return pdf_texts
-
-
-# def create_vector_store(pdf_texts):
-#     """Construim o bază de date pentru căutări eficiente pe baza documentelor"""
-#     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-#     texts = []
-#     for pdf in pdf_texts:
-#         texts.extend(text_splitter.split_text(pdf["text"]))
-    
-#     embeddings = OpenAIEmbeddings()  # Folosim OpenAI pentru embedding-uri textuale
-#     vector_store = FAISS.from_texts(texts, embeddings)
-#     return vector_store
-
-# @st.cache_resource
-# def load_chatbot(vector_store):
-#     """Încarcă modelul Hugging Face pentru întrebări pe baza documentelor"""
-#     retriever = vector_store.as_retriever(search_kwargs={"k": 5})  # Extragem 5 rezultate relevante
-#     hf_pipeline = pipeline("text-generation", model="bigscience/bloom-560m")  # Model Hugging Face
-#     llm = HuggingFacePipeline(pipeline=hf_pipeline)
-    
-#     qa_chain = RetrievalQA(llm=llm, retriever=retriever)
-#     return qa_chain
-
-# pdf_texts = load_pdfs_from_folder("raport")
-# vector_store = create_vector_store(pdf_texts)
-# qa_chain = load_chatbot(vector_store)
-
-
-
-
-# # Dacă utilizatorul activează asistentul
-# if assistant_active:
-#     st.header("📊 Asistent MDED – Analiză Economică bazată pe Rapoarte PDF")
-
-#     user_input = st.text_area("🔎 Pune o întrebare despre economia Republicii Moldova:")
-
-#     if st.button("Analizează"):
-#         if user_input:
-#             with st.spinner("📚 Căutare informații în rapoarte..."):
-#                 response = qa_chain.run(user_input)
-            
-#             st.success("📌 Răspuns generat:")
-#             st.write(response)
-#         else:
-#             st.warning("⚠️ Te rog să introduci o întrebare.")
-# # Dacă utilizatorul activează asistentul
-
-
-# Adăugare Footer
 st.markdown("""
     <hr style='border: 1px solid #ddd;'>
     <p style='text-align: center; color: grey;'>© 2024 APM. Toate drepturile rezervate.</p>
