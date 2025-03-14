@@ -10,7 +10,7 @@ def load_data(file_path=os.path.join(os.path.dirname(__file__), '../data/Data.xl
     
     # Verificăm foile disponibile în fișier
     sheets = pd.ExcelFile(file_path).sheet_names
-    required_sheets = ["Start_Data", "Exp_Reexp", "Influenta_Export"]
+    required_sheets = ["Start_Data", "Exp_Reexp", "Influenta_Export", "Influenta_Import", "Exp_Lunar"]
 
     # Asigurăm că toate foile necesare există
     for sheet in required_sheets:
@@ -18,14 +18,16 @@ def load_data(file_path=os.path.join(os.path.dirname(__file__), '../data/Data.xl
             raise ValueError(f"Foaia '{sheet}' nu există în fișierul Excel. Foi disponibile: {sheets}")
 
     # Încărcăm datele din fiecare foaie
-    df_general = pd.read_excel(file_path, sheet_name="Start_Data")
+    df = pd.read_excel(file_path, sheet_name="Start_Data")
     df_exp_reexp = pd.read_excel(file_path, sheet_name="Exp_Reexp")
+    df_exp_lunar = pd.read_excel(file_path, sheet_name="Exp_Lunar")
     df_influenta = pd.read_excel(file_path, sheet_name="Influenta_Export")
+    df_influenta_Import = pd.read_excel(file_path, sheet_name="Influenta_Import")
 
     # Preprocesare pentru "Start_Data"
-    df_general["An"] = df_general["An"].fillna(method="ffill").astype("Int64")
-    df_general = df_general.dropna(subset=["Lună", "Țară"])
-    df_general = df_general[["An", "Lună", "Țară", "Grupă Țări", "Trimestru", "Semestru", 
+    df["An"] = df["An"].fillna(method="ffill").astype("Int64")
+    df = df.dropna(subset=["Lună", "Țară"])
+    df = df[["An", "Lună", "Țară", "Grupă Țări", "Trimestru", "Semestru", 
                              "Exporturi (mil. $)", "Importuri (mil. $)", "Sold Comercial (mil. $)"]]
 
     # Preprocesare pentru "Exp_Reexp"
@@ -38,4 +40,14 @@ def load_data(file_path=os.path.join(os.path.dirname(__file__), '../data/Data.xl
     df_influenta = df_influenta.dropna(subset=["Lună", "Denumire"])
     df_influenta = df_influenta[["An", "Lună", "Denumire", "Grad"]]
 
-    return df_general, df_exp_reexp, df_influenta
+    # Preprocesare pentru "Influenta_Import"
+    df_influenta_Import["An"] = df_influenta_Import["An"].fillna(method="ffill").astype("Int64")
+    df_influenta_Import = df_influenta_Import.dropna(subset=["Lună", "Denumire"])
+    df_influenta_Import = df_influenta_Import[["An", "Lună", "Denumire", "Grad"]]
+
+    # Preprocesare pentru "Exp_Lunar"
+    df_exp_lunar["An"] = df_exp_lunar["An"].fillna(method="ffill").astype("Int64")
+    df_exp_lunar = df_exp_lunar.dropna(subset=["Lună"])
+    df_exp_lunar = df_exp_lunar[["An", "Lună", "Exporturi (mil. $)", "Importuri (mil. $)", "Sold Comercial (mil. $)"]]
+
+    return df, df_exp_reexp, df_influenta, df_influenta_Import, df_exp_lunar
