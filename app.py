@@ -87,6 +87,30 @@ selected_country = st.sidebar.selectbox("Selectează țara:", ["Toate"] + list(d
 selected_group = st.sidebar.selectbox("Selectează grupul de țări:", ["Toate", "UE", "CSI", "Restul lumii"])
 selected_month = st.sidebar.selectbox("Selectează perioada:", df["Lună"].unique())
 assistant_active = st.sidebar.checkbox("Activare Asistent MDED")
+st.sidebar.markdown(
+    """
+    <style>
+        .back-button {
+            display: block;
+            text-align: center;
+            background-color: #ffffff;
+            color: white;
+            padding: 10px;
+            text-decoration: none;
+            border-radius: 8px;
+            width: 100%; 
+            height: 45px; 
+            transition: 0.3s;
+        }
+        .back-button:hover {
+            filter: blur(0px); 
+            background-color: #dadfe5; 
+        }
+    </style>
+    <a href='https://danl1l.github.io/macro/index.html' target='_self' class='back-button'>Înapoi</a>
+    """,
+    unsafe_allow_html=True
+)
 # Filtrare după țară dacă este selectată una
 if selected_year != "Toți":
     df = df[df["An"] == selected_year]
@@ -124,11 +148,11 @@ df_month = df[df["Lună"] == selected_month]
 # Date PIB
 df_pib_growth = pd.DataFrame({
     'An':             ['20', '21', '22', '23', '24'],
-    'Creștere PIB (%)': [-8.3, 13.9, -4.6, 0.4,2]
+    'Creștere PIB (%)': [-8.3, 13.9, -4.6, 0.4,0.1]
 })
 # DaQe Inflație
 df_inflatie = pd.DataFrame({
-    'Trimestru': ['2020', '2021', '2022', '2023', '2024'],
+    'An': ['2020', '2021', '2022', '2023', '2024'],
     'Rata Inflației (%)': [3.8, 5.1, 28.7, 13.4, 4.7]
 })
 
@@ -142,7 +166,7 @@ df_comert = pd.DataFrame({
 
 # Date Rata Dobânzii
 df_dobanda = pd.DataFrame({
-    'Data': ['2022-04-08', '2022-05-12', '2023-02-07', '2023-03-20', '2023-05-11', '2023-06-20', '2023-07-11', '2024-02-06', '2024-03-21',  '2024-05-07', '2025-01-10', '2025-02-10'], 
+    'Perioada': ['2022-04-08', '2022-05-12', '2023-02-07', '2023-03-20', '2023-05-11', '2023-06-20', '2023-07-11', '2024-02-06', '2024-03-21',  '2024-05-07', '2025-01-10', '2025-02-10'], 
     'Rata de Bază (%)': [21.5, 20, 17, 14, 10, 6,4.75, 4.25, 3.75,3.6, 5.6, 6.5]
 })
 
@@ -152,7 +176,7 @@ col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.subheader("Evoluție PIB")
-    st.metric(label="PIB 2024", value="+0.4%")
+    st.metric(label="PIB 2024", value="+0.1%")
     fig_pib = px.bar(df_pib_growth, x="An", y="Creștere PIB (%)", 
                      title="", text_auto=True)
 
@@ -169,9 +193,9 @@ with col1:
 
 # Diagrama Inflației
 with col2:
-    st.subheader("Rata Inflației")
+    st.subheader("Rata medie a inflației")
     st.metric(label="Inflația 2024", value="4.7%")
-    fig_inflatie = px.bar(df_inflatie, x="Trimestru", y="Rata Inflației (%)", title="")
+    fig_inflatie = px.bar(df_inflatie, x="An", y="Rata Inflației (%)", title="")
     fig_inflatie.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
     st.plotly_chart(fig_inflatie, use_container_width=True)
 
@@ -187,7 +211,7 @@ with col3:
 with col4:
     st.subheader("Rata Dobânzii")
     st.metric(label="10 Ian 2025", value="5.60%")
-    fig_dobanda = px.line(df_dobanda, x="Data", y="Rata de Bază (%)", title="")
+    fig_dobanda = px.line(df_dobanda, x="Perioada", y="Rata de Bază (%)", title="")
     fig_dobanda.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
     st.plotly_chart(fig_dobanda, use_container_width=True)
 
@@ -196,7 +220,7 @@ with col4:
 
 # Adăugare titlu la mijloc de pagină 
 st.markdown("<hr>", unsafe_allow_html=True)
-st.title("Analiza Comerțului Internațional")
+st.title("Analiza comerțului internațional")
 # Subtittlu mijloc ecran
 
 
