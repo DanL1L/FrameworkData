@@ -85,7 +85,7 @@ selected_period = st.sidebar.selectbox("Selectează perioada:", ["Lunară"])
 selected_indicator = st.sidebar.selectbox("Selectează indicatorul:", ["Exporturi (mil. $)", "Importuri (mil. $)", "Sold Comercial (mil. $)"])
 selected_country = st.sidebar.selectbox("Selectează țara:", ["Toate"] + list(df["Țară"].unique()))
 selected_group = st.sidebar.selectbox("Selectează grupul de țări:", ["Toate", "UE", "CSI", "Restul lumii"])
-selected_month = st.sidebar.selectbox("Selectează perioada:", df["Lună"].unique())
+selected_month = st.sidebar.selectbox("Selectează intervalul:", df["Lună"].unique())
 # assistant_active = st.sidebar.checkbox("Activare Asistent MDED")
 st.sidebar.markdown(
     """
@@ -175,6 +175,24 @@ col1, col2, col3, col4 = st.columns(4)
 
 
 with col1:
+    st.subheader("Comerț Int.")
+    st.metric(label="Deficit 2024", value="-5,510.1 mil. $")
+    fig_comert = px.bar(df_comert, x="An", y=["Exporturi (mil. $)", "Importuri (mil. $)"], barmode='group', title="")
+    fig_comert.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
+    st.plotly_chart(fig_comert, use_container_width=True)
+
+    
+
+# Diagrama Inflației
+with col2:
+    st.subheader("Rata medie a inflației")
+    st.metric(label="Inflația 2024", value="4.7%")
+    fig_inflatie = px.bar(df_inflatie, x="An", y="Rata Inflației (%)", title="")
+    fig_inflatie.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
+    st.plotly_chart(fig_inflatie, use_container_width=True)
+
+# Diagrama Comerțului Internațional
+with col3:
     st.subheader("Evoluție PIB")
     st.metric(label="PIB 2024", value="+0.1%")
     fig_pib = px.bar(df_pib_growth, x="An", y="Creștere PIB (%)", 
@@ -190,23 +208,6 @@ with col1:
     )
     
     st.plotly_chart(fig_pib, use_container_width=True)
-
-# Diagrama Inflației
-with col2:
-    st.subheader("Rata medie a inflației")
-    st.metric(label="Inflația 2024", value="4.7%")
-    fig_inflatie = px.bar(df_inflatie, x="An", y="Rata Inflației (%)", title="")
-    fig_inflatie.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
-    st.plotly_chart(fig_inflatie, use_container_width=True)
-
-# Diagrama Comerțului Internațional
-with col3:
-    st.subheader("Comerț Int.")
-    st.metric(label="Deficit 2024", value="-5,510.1 mil. $")
-    fig_comert = px.bar(df_comert, x="An", y=["Exporturi (mil. $)", "Importuri (mil. $)"], barmode='group', title="")
-    fig_comert.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
-    st.plotly_chart(fig_comert, use_container_width=True)
-
 # Diagrama Ratei Dobânzii
 with col4:
     st.subheader("Rata Dobânzii")
@@ -231,7 +232,7 @@ col1, col2 = st.columns(2)
 df_top_import = df_month.sort_values(by="Importuri (mil. $)", ascending=False).head(10)
 
 if df_top_import.empty:
-     st.warning(f"Nu există date disponibile pentru anul {selected_year} privind importurile.")
+     st.warning(f"Nu există date disponibile pentru  **{selected_month} {selected_year}**  privind importurile.")
 else:
 # Top 10 țări pentru importuri în coloana stângă
     with col1:
@@ -247,7 +248,7 @@ else:
 
 df_top_export = df_month.sort_values(by="Exporturi (mil. $)", ascending=False).head(10)
 if df_top_import.empty:
-     st.warning(f"Nu există date disponibile pentru anul {selected_year} privind exporturile.")
+     st.warning(f"Nu există date disponibile pentru anul **{selected_month} {selected_year}** privind exporturile.")
 else:
 # Top 10 țări pentru exporturi în coloana dreaptă
     with col2:
@@ -467,7 +468,7 @@ reexporturi = df_exports_filtered["Reexporturi"].sum()
 
 
 if df_countries_grouped.empty:
-    st.warning("Nu există date pentru perioada selectată. Nu se poate calcula țara cu cel mai mare comerț.")
+    st.warning("Nu există date pentru perioada selectată.")
     max_country_group = None  # Sau un fallback gol
 else:
 # COL 1 - Descrierea textului, aliniat vertical
@@ -483,18 +484,16 @@ else:
         - **{max_country_group['Grupă Țări']}**, reprezentând **{max_country_group['Procent']}%** din total.
         - **Restul lumii** și **Statele CSI** constituind **{100 - max_country_group['Procent']}%** din schimburile comerciale.
         
-        Exporturile de produse autohtone au fost de **{exporturi_autohtone:,.1f} mil. dolari** în, iar reexporturile de mărfuri străine au fost de **{reexporturi:,.1f} mil. dolari** în anul **{selected_year}**.
+        În anul **{selected_year}** exporturile de produse autohtone au fost de **{exporturi_autohtone:,.1f} mil. dolari** în, iar reexporturile de mărfuri străine au fost de **{reexporturi:,.1f} mil. dolari**.
         """)
         st.markdown('</div>', unsafe_allow_html=True)
 
-
-# COL 2 - Afișarea graficului
-with col2:
-    st.plotly_chart(fig_donut, use_container_width=True)
-
-
-
-
+if df_countries_grouped.empty:
+    st.warning("Alegeți o altă perioadă pentru a vizualiza datele.")
+else:
+    # COL 2 - Afișarea graficului
+    with col2:
+        st.plotly_chart(fig_donut, use_container_width=True)
 
 
 
