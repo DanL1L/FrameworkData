@@ -175,8 +175,8 @@ col1, col2, col3, col4 = st.columns(4)
 
 
 with col1:
-    st.subheader("Comerț Int.")
-    st.metric(label="Deficit 2024", value="-5,510.1 mil. $")
+    st.subheader("Comerț Internațional")
+    st.metric(label=f"Deficit 2024 ", value="-5,510.1 mil. $")
     fig_comert = px.bar(df_comert, x="An", y=["Exporturi (mil. $)", "Importuri (mil. $)"], barmode='group', title="")
     fig_comert.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
     st.plotly_chart(fig_comert, use_container_width=True)
