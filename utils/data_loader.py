@@ -10,7 +10,7 @@ def load_data(file_path=os.path.join(os.path.dirname(__file__), '../data/Data.xl
     
     # Verificăm foile disponibile în fișier
     sheets = pd.ExcelFile(file_path).sheet_names
-    required_sheets = ["Start_Data", "Exp_Reexp", "Influenta_Export", "Influenta_Import", "Exp_Lunar"]
+    required_sheets = ["Start_Data", "Exp_Reexp", "Influenta_Export", "Influenta_Import", "Exp_Lunar", "Exp_imp_Total"]
 
     # Asigurăm că toate foile necesare există
     for sheet in required_sheets:
@@ -23,7 +23,8 @@ def load_data(file_path=os.path.join(os.path.dirname(__file__), '../data/Data.xl
     df_exp_lunar = pd.read_excel(file_path, sheet_name="Exp_Lunar")
     df_influenta = pd.read_excel(file_path, sheet_name="Influenta_Export")
     df_influenta_Import = pd.read_excel(file_path, sheet_name="Influenta_Import")
-
+    df_exp_imp_Total = pd.read_excel(file_path, sheet_name="Exp_imp_Total")
+    
     # Preprocesare pentru "Start_Data"
     df["An"] = df["An"].fillna(method="ffill").astype("Int64")
     df = df.dropna(subset=["Lună", "Țară"])
@@ -50,4 +51,9 @@ def load_data(file_path=os.path.join(os.path.dirname(__file__), '../data/Data.xl
     df_exp_lunar = df_exp_lunar.dropna(subset=["Lună"])
     df_exp_lunar = df_exp_lunar[["An", "Lună", "Exporturi (mil. $)", "Importuri (mil. $)", "Sold Comercial (mil. $)"]]
 
-    return df, df_exp_reexp, df_influenta, df_influenta_Import, df_exp_lunar
+    # Preprocesare pentru "Exp_imp_Total"
+    df_exp_imp_Total["An"] = df_exp_imp_Total["An"].fillna(method="ffill").astype("Int64")
+    df_exp_imp_Total = df_exp_imp_Total.dropna(subset=["Lună"])
+    df_exp_imp_Total = df_exp_imp_Total[["An", "Lună", "Exporturi (mil. $)", "Importuri (mil. $)", "Sold Comercial (mil. $)"]]
+
+    return df, df_exp_reexp, df_influenta, df_influenta_Import, df_exp_lunar, df_exp_imp_Total
