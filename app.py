@@ -49,7 +49,7 @@ with col2:
 st.markdown("<hr>", unsafe_allow_html=True)
 
 # Încărcarea datelor
-df, df_exports, df_influenta, df_influenta_Import, df_exp_lunar  = load_data()
+df, df_exports, df_influenta, df_influenta_Import, df_exp_lunar, df_exp_imp_total  = load_data()
 
 month_mapping = {
     "Ianuarie": 1, "Februarie": 2, "Martie": 3, "Aprilie": 4,
@@ -156,9 +156,11 @@ df_inflatie = pd.DataFrame({
     'Rata Inflației (%)': [3.8, 5.1, 28.7, 13.4, 4.7]
 })
 
+selected_year_int = int(selected_year)
+
 # Date Comerț Internațional
 df_comert = pd.DataFrame({
-    'An': [2023, 2024],
+    'An': [selected_year_int - 1, selected_year_int],
     'Exporturi (mil. $)': [4048.6, 3555.1],
     'Importuri (mil. $)': [8675.3, 9065.2],
     'Deficit Comercial (mil. $)': [-4626.7, -5510.1]
@@ -170,16 +172,21 @@ df_dobanda = pd.DataFrame({
     'Rata de Bază (%)': [21.5, 20, 17, 14, 10, 6,4.75, 4.25, 3.75,3.6, 5.6, 6.5]
 })
 
+selected_row = df_exp_imp_total.iloc[-1]
+deficit_val = selected_row["Sold Comercial (mil. $)"]
+
+
 # Layout compact cu 4 coloane
 col1, col2, col3, col4 = st.columns(4)
 
 
+
 with col1:
-    st.subheader("Comerț Internațional")
-    st.metric(label=f"Deficit 2024 ", value="-5,510.1 mil. $")
-    fig_comert = px.bar(df_comert, x="An", y=["Exporturi (mil. $)", "Importuri (mil. $)"], barmode='group', title="")
-    fig_comert.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
-    st.plotly_chart(fig_comert, use_container_width=True)
+        st.subheader("Comerț Internațional")
+        st.metric(label=f"Deficit **{selected_month} {selected_year}**", value=f"{deficit_val:,.1f} mil. $")
+        fig_comert = px.bar(df_comert, x="An", y=["Exporturi (mil. $)", "Importuri (mil. $)"], barmode='group', title="")
+        fig_comert.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
+        st.plotly_chart(fig_comert, use_container_width=True)
 
     
 
