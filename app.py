@@ -143,7 +143,13 @@ df_grouped = df.groupby(["Perioadă", "Țară"])[selected_indicator].sum().reset
 # Filtrare pentru luna selectată
 df_month = df[df["Lună"] == selected_month]
 
+selected_row = df_exp_imp_total.iloc[-1]
+selected_row_Imp = df_exp_imp_total.iloc[-1]
+selected_row_Exp = df_exp_imp_total.iloc[-1]
 
+deficit_val = selected_row["Sold Comercial (mil. $)"]
+deficit_val_Imp = selected_row_Imp["Importuri (mil. $)"]
+deficit_val_Exp = selected_row_Exp["Exporturi (mil. $)"]
 
 # Cele 4 diagrame Start
 
@@ -159,13 +165,15 @@ df_inflatie = pd.DataFrame({
 })
 
 selected_year_int = int(selected_year)
+deficit_val_Exp_int= int(deficit_val_Exp)
+selected_row_Imp_int = int(deficit_val_Imp)
 
 # Date Comerț Internațional
 df_comert = pd.DataFrame({
     'An': [selected_year_int - 1, selected_year_int],
-    'Exporturi (mil. $)': [4048.6, 3555.1],
-    'Importuri (mil. $)': [8675.3, 9065.2],
-    'Deficit Comercial (mil. $)': [-4626.7, -5510.1]
+    'Exporturi (mil. $)': [deficit_val_Exp_int -1 , deficit_val_Exp_int],
+    'Importuri (mil. $)': [selected_row_Imp_int -1, selected_row_Imp_int],
+    'Deficit Comercial (mil. $)': [deficit_val -1 , deficit_val]
 })
 
 # Date Rata Dobânzii
@@ -174,8 +182,7 @@ df_dobanda = pd.DataFrame({
     'Rata de Bază (%)': [21.5, 20, 17, 14, 10, 6,4.75, 4.25, 3.75,3.6, 5.6, 6.5]
 })
 
-selected_row = df_exp_imp_total.iloc[-1]
-deficit_val = selected_row["Sold Comercial (mil. $)"]
+
 
 
 # Layout compact cu 4 coloane
