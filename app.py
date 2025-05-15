@@ -160,8 +160,8 @@ df_pib_growth = pd.DataFrame({
 })
 # Inflație 
 df_inflatie = pd.DataFrame({
-    'An': ['2020', '2021', '2022', '2023', '2024'],
-    'Rata Inflației (%)': [3.8, 5.1, 28.7, 13.4, 4.7]
+    'An': ['2021', '2022', '2023', '2024', '2025'],
+    'Rata Inflației (%)': [5.1, 28.7, 13.4, 4.7, 7.8]
 })
 
 selected_year_int = int(selected_year)
@@ -192,7 +192,7 @@ col1, col2, col3, col4 = st.columns(4)
 
 with col1:
         st.subheader("Comerț Internațional")
-        st.metric(label=f"Deficit", value=f"{deficit_val:,.1f} mil. $")
+        st.metric(label=f"Deficit situația curentă", value=f"{deficit_val:,.1f} mil. $")
         fig_comert = px.bar(df_comert, x="An", y=["Exporturi (mil. $)", "Importuri (mil. $)"], barmode='group', title="")
         fig_comert.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
         st.plotly_chart(fig_comert, use_container_width=True)
@@ -202,7 +202,7 @@ with col1:
 # Diagrama Inflației
 with col2:
     st.subheader("Rata medie a inflației")
-    st.metric(label="Inflația 2024", value="4.7%")
+    st.metric(label="Inflația 2025", value="7.8%")
     fig_inflatie = px.bar(df_inflatie, x="An", y="Rata Inflației (%)", title="")
     fig_inflatie.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
     st.plotly_chart(fig_inflatie, use_container_width=True)
@@ -227,7 +227,7 @@ with col3:
 # Diagrama Ratei Dobânzii
 with col4:
     st.subheader("Rata Dobânzii")
-    st.metric(label="10 Ian 2025", value="6.5%")
+    st.metric(label="05 Feb 2025", value="6.5%")
     fig_dobanda = px.line(df_dobanda, x="Perioada", y="Rata de Bază (%)", title="")
     fig_dobanda.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
     st.plotly_chart(fig_dobanda, use_container_width=True)
