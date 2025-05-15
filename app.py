@@ -176,6 +176,7 @@ df_comert = pd.DataFrame({
     'Deficit Comercial (mil. $)': [deficit_val]
 })
 
+
 # Date Rata Dobânzii
 df_dobanda = pd.DataFrame({
     'Perioada': ['2022-04-08', '2022-05-12', '2023-02-07', '2023-03-20', '2023-05-11', '2023-06-20', '2023-07-11', '2024-02-06', '2024-03-21',  '2024-05-07', '2025-01-10', '2025-02-10'], 
@@ -524,7 +525,9 @@ else:
 df_grouped_filtered = df_grouped[df_grouped["Perioadă"] == selected_month]
 
 # Afișare tabel filtrat pe toată lățimea ecranului
-st.subheader("Tabel Date")
+st.subheader(f"Tabel **{selected_indicator} {selected_year}** - {selected_month}")  
+if df_grouped_filtered.empty:
+    st.warning(f"Nu există date pentru perioada selectată **{selected_month} {selected_year}.**")
 st.dataframe(df_grouped_filtered, use_container_width=True)
 
 
