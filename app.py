@@ -170,10 +170,10 @@ selected_row_Imp_int = int(deficit_val_Imp)
 
 # Date Comerț Internațional
 df_comert = pd.DataFrame({
-    'An': [selected_year_int - 1, selected_year_int],
-    'Exporturi (mil. $)': [deficit_val_Exp_int -1 , deficit_val_Exp_int],
-    'Importuri (mil. $)': [selected_row_Imp_int -1, selected_row_Imp_int],
-    'Deficit Comercial (mil. $)': [deficit_val -1 , deficit_val]
+    'An': [selected_year_int],
+    'Exporturi (mil. $)': [deficit_val_Exp_int],
+    'Importuri (mil. $)': [selected_row_Imp_int],
+    'Deficit Comercial (mil. $)': [deficit_val]
 })
 
 # Date Rata Dobânzii
