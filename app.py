@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from utils.data_loader import load_data
+# from utils.comert_scraper import fetch_comert_data
+
 import os
 # os.system('pip install PyPDF2')
 # os.system('pip install langchain langchain-community')
@@ -594,6 +596,19 @@ fig_influenta_import = px.bar(
     color_continuous_scale="Blues_r",
     height=600
 )
+
+
+# st.markdown("### Evoluția Indicatorilor Cheie (statistica.gov.md)")
+
+# comert_data = fetch_comert_data()
+# if comert_data:
+#     st.markdown(f"*Actualizat la: **{comert_data['data_actualizare']}***")
+#     for categorie, valori in comert_data["indicatori"].items():
+#         st.subheader(categorie)
+#         df_ind = pd.DataFrame(valori.items(), columns=["Perioada", "Valoare (%)"])
+#         st.dataframe(df_ind, use_container_width=True)
+# else:
+#     st.warning("Nu s-au putut extrage datele de pe pagina oficială.")
 
 # Afișare grafic
 st.plotly_chart(fig_influenta_import, use_container_width=True)
