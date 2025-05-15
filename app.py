@@ -178,55 +178,6 @@ selected_row = df_exp_imp_total.iloc[-1]
 deficit_val = selected_row["Sold Comercial (mil. $)"]
 
 
-# Layout compact cu 4 coloane
-col1, col2, col3, col4 = st.columns(4)
-
-
-
-with col1:
-        st.subheader("Comerț Internațional")
-        st.metric(label=f"Deficit **{selected_month} {selected_year}**", value=f"{deficit_val:,.1f} mil. $")
-        fig_comert = px.bar(df_comert, x="An", y=["Exporturi (mil. $)", "Importuri (mil. $)"], barmode='group', title="")
-        fig_comert.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
-        st.plotly_chart(fig_comert, use_container_width=True)
-
-    
-
-# Diagrama Inflației
-with col2:
-    st.subheader("Rata medie a inflației")
-    st.metric(label="Inflația 2024", value="4.7%")
-    fig_inflatie = px.bar(df_inflatie, x="An", y="Rata Inflației (%)", title="")
-    fig_inflatie.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
-    st.plotly_chart(fig_inflatie, use_container_width=True)
-
-# Diagrama Comerțului Internațional
-with col3:
-    st.subheader("Evoluție PIB")
-    st.metric(label="PIB 2024", value="+0.1%")
-    fig_pib = px.bar(df_pib_growth, x="An", y="Creștere PIB (%)", 
-                     title="", text_auto=True)
-
-    fig_pib.update_yaxes(range=[-15, 20], zeroline=True, zerolinewidth=2, zerolinecolor="black")
-    
-
-    fig_pib.update_layout(
-        height=250, 
-        margin=dict(l=20, r=20, t=20, b=20), 
-        showlegend=False
-    )
-    
-    st.plotly_chart(fig_pib, use_container_width=True)
-# Diagrama Ratei Dobânzii
-with col4:
-    st.subheader("Rata Dobânzii")
-    st.metric(label="10 Ian 2025", value="6.5%")
-    fig_dobanda = px.line(df_dobanda, x="Perioada", y="Rata de Bază (%)", title="")
-    fig_dobanda.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
-    st.plotly_chart(fig_dobanda, use_container_width=True)
-
-# Cele 4 diagrame Finish
-
 
 # Adăugare titlu la mijloc de pagină 
 st.markdown("<hr>", unsafe_allow_html=True)
