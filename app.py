@@ -514,7 +514,29 @@ else:
 
 
 
+# Definirea ordinii corecte pentru sortare
+month_order = {
+    "Ianuarie": 0,  # Facem "Ianuarie" prima
+    "Ianuarie - Februarie": 1, "Ianuarie - Martie": 2, "Ianuarie - Aprilie": 3,
+    "Ianuarie - Mai": 4, "Ianuarie - Iunie": 5, "Ianuarie - Iulie": 6, "Ianuarie - August": 7,
+    "Ianuarie - Septembrie": 8, "Ianuarie - Octombrie": 9, "Ianuarie - Noiembrie": 10, "Ianuarie - Decembrie": 11
+}
 
+# Aplicăm mapping-ul pentru a avea valori numerice asociate perioadelor
+df_total["Sort_Index"] = df_total["Perioadă"].map(month_order)
+
+# Asigurăm că valorile nespecificate primesc un index mare pentru a fi plasate la final
+df_total["Sort_Index"] = df_total["Sort_Index"].fillna(99)
+
+# Sortare după index-ul definit (crescător, cu "Ianuarie" prima)
+df_total = df_total.sort_values(by="Sort_Index", ascending=True).drop(columns=["Sort_Index"])
+
+# Afișare grafic principal - Total agregat fără divizări
+st.subheader(f"Evoluția {selected_indicator} (Perioadă - {selected_period})")
+fig = px.bar(df_total, x="Perioadă", y=selected_indicator, title=f"{selected_indicator} în timp", 
+             labels={selected_indicator: "Valoare (mil. $)"}, barmode='relative')
+
+st.plotly_chart(fig, use_container_width=True)
 
 
 
@@ -522,7 +544,7 @@ else:
 
 
 # Filtrare pentru perioada selectată
-df_grouped_filtered = df_grouped[df_grouped["Perioadă"] == selected_month]
+df_grouped_filtered = df_grouped[df_grouped["Perioadă"] == selected_month ]
 
 # Afișare tabel filtrat pe toată lățimea ecranului
 st.subheader(f"Tabel **{selected_indicator} {selected_year}** - {selected_month}")  
