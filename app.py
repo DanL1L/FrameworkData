@@ -40,7 +40,7 @@ with col1:
 
 with col2:
     st.markdown("""
-        <h1 style='color: #1f4e79;'> Principalii Indicatorii macroeconomici</h1>
+        <h1 style='color: #1f4e79;'> Principalii indicatori macroeconomici</h1>
         <p><strong>Analiza și Prognozare Macroeconomică</strong></p>
          <p style='text-align: justify;'>Această pagină oferă o <strong>monitorizare și analiză</strong> a situației macroeconomice din Republica Moldova, prezentând informații despre <strong>importuri, 
          exporturi și balanța comercială</strong>. Scopul principal este <strong>informarea factorilor de decizie</strong> - conducerea ministerului, instituțiile de stat, organizațiile internaționale și publicul larg.
