@@ -10,7 +10,7 @@ def load_data(file_path=os.path.join(os.path.dirname(__file__), '../data/Data.xl
     
     # Verificăm foile disponibile în fișier
     sheets = pd.ExcelFile(file_path).sheet_names
-    required_sheets = ["Start_Data", "Exp_Reexp", "Influenta_Export", "Influenta_Import", "Exp_Lunar", "Exp_imp_Total"]
+    required_sheets = ["Start_Data", "Exp_Reexp", "Influenta_Export", "Influenta_Import", "Exp_Lunar", "Exp_imp_Total","Import_NCM_I", "Import_NCM_II", "Import_NCM_III"]
 
     # Asigurăm că toate foile necesare există
     for sheet in required_sheets:
@@ -56,4 +56,17 @@ def load_data(file_path=os.path.join(os.path.dirname(__file__), '../data/Data.xl
     df_exp_imp_Total = df_exp_imp_Total.dropna(subset=["Lună"])
     df_exp_imp_Total = df_exp_imp_Total[["An", "Lună", "Exporturi (mil. $)", "Importuri (mil. $)", "Sold Comercial (mil. $)"]]
 
-    return df, df_exp_reexp, df_influenta, df_influenta_Import, df_exp_lunar, df_exp_imp_Total
+    # Preluăm toate foile relevante pentru Import_NCM
+    sheet_names = [s for s in sheets if s.startswith("Import_NCM_")]
+    df_import_ncm_all = {}
+
+    for sheet in sheet_names:
+        df_tmp = pd.read_excel(file_path, sheet_name=sheet)
+        df_tmp.columns = ["Cod", "Lună", "Denumire", "2022", "2023", "2024", "2025"]
+        df_tmp = df_tmp.dropna(subset=["Cod", "Denumire"])
+        df_tmp["Cod"] = df_tmp["Cod"].astype(str).str.strip()
+        df_tmp["Lună"] = df_tmp["Lună"].astype(str).str.strip()
+        df_tmp["Denumire"] = df_tmp["Denumire"].astype(str).str.strip()
+        df_import_ncm_all[sheet] = df_tmp
+
+    return df, df_exp_reexp, df_influenta, df_influenta_Import, df_exp_lunar, df_exp_imp_Total, df_import_ncm_all
