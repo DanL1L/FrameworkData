@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import re
 import plotly.express as px
 from utils.data_loader import load_data
 # from utils.comert_scraper import fetch_comert_data
@@ -28,9 +29,6 @@ st.set_page_config(page_title='Macroeconomic', layout='wide')
 #     <h1 style='text-align: center; color: #1a498d;'>Indicatorii macroeconomici</h1>
 #     <hr style='border: 1px solid #ddd;'>
 # """, unsafe_allow_html=True)
-
-
-
 # Creare layout cu logo și titlu pe același rând
 col1, col2 = st.columns([1, 4])  # Prima coloană mai mică pentru logo, a doua mai mare pentru text
 
@@ -40,7 +38,7 @@ with col1:
 
 with col2:
     st.markdown("""
-        <h1 style='color: #1f4e79;'> Principalii indicatori macroeconomici</h1>
+        <h1 style='color: #1f4e79;'> Principalii Indicatori macroeconomici</h1>
         <p><strong>Analiza și Prognozare Macroeconomică</strong></p>
          <p style='text-align: justify;'>Această pagină oferă o <strong>monitorizare și analiză</strong> a situației macroeconomice din Republica Moldova, prezentând informații despre <strong>importuri, 
          exporturi și balanța comercială</strong>. Scopul principal este <strong>informarea factorilor de decizie</strong> - conducerea ministerului, instituțiile de stat, organizațiile internaționale și publicul larg.
@@ -51,7 +49,7 @@ with col2:
 st.markdown("<hr>", unsafe_allow_html=True)
 
 # Încărcarea datelor
-df, df_exports, df_influenta, df_influenta_Import, df_exp_lunar, df_exp_imp_total  = load_data()
+df, df_exports, df_influenta, df_influenta_Import, df_exp_lunar, df_exp_imp_total, df_import_ncm_all  = load_data()
 
 month_mapping = {
     "Ianuarie": 1, "Februarie": 2, "Martie": 3, "Aprilie": 4,
@@ -81,13 +79,12 @@ df = df.astype({"An": "str", "Lună": "str", "Trimestru": "str", "Semestru": "st
 st.sidebar.header("Filtre")
 # Adăugare FILTRU pentru selecția anului
 selected_year = st.sidebar.selectbox("Selectează anul:",sorted(df["An"].unique(), reverse=True))
-
-
 selected_period = st.sidebar.selectbox("Selectează perioada:", ["Lunară"])
 selected_indicator = st.sidebar.selectbox("Selectează indicatorul:", ["Exporturi (mil. $)", "Importuri (mil. $)", "Sold Comercial (mil. $)"])
 selected_country = st.sidebar.selectbox("Selectează țara:", ["Toate"] + list(df["Țară"].unique()))
 selected_group = st.sidebar.selectbox("Selectează grupul de țări:", ["Toate", "UE", "CSI", "Restul lumii"])
 selected_month = st.sidebar.selectbox("Selectează intervalul:", df["Lună"].unique())
+
 # assistant_active = st.sidebar.checkbox("Activare Asistent MDED")
 st.sidebar.markdown(
     """
@@ -113,6 +110,7 @@ st.sidebar.markdown(
     """,
     unsafe_allow_html=True
 )
+
 # Filtrare după țară dacă este selectată una
 if selected_year != "Toți":
     df = df[df["An"] == selected_year]
@@ -142,6 +140,7 @@ for col in ["Exporturi (mil. $)", "Importuri (mil. $)", "Sold Comercial (mil. $)
 df_grouped = df.groupby(["Perioadă", "Țară"])[selected_indicator].sum().reset_index()
 # Filtrare pentru luna selectată
 df_month = df[df["Lună"] == selected_month]
+
 
 selected_row = df_exp_imp_total.iloc[-1]
 selected_row_Imp = df_exp_imp_total.iloc[-1]
@@ -184,22 +183,14 @@ df_dobanda = pd.DataFrame({
 })
 
 
-
-
 # Layout compact cu 4 coloane
 col1, col2, col3, col4 = st.columns(4)
-
-
-
 with col1:
         st.subheader("Comerț Internațional")
         st.metric(label=f"Deficit situația curentă", value=f"{deficit_val:,.1f} mil. $")
         fig_comert = px.bar(df_comert, x="An", y=["Exporturi (mil. $)", "Importuri (mil. $)"], barmode='group', title="")
         fig_comert.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
         st.plotly_chart(fig_comert, use_container_width=True)
-
-    
-
 # Diagrama Inflației
 with col2:
     st.subheader("Rata medie a inflației")
@@ -214,16 +205,12 @@ with col3:
     st.metric(label="PIB 2024", value="+0.1%")
     fig_pib = px.bar(df_pib_growth, x="An", y="Creștere PIB (%)", 
                      title="", text_auto=True)
-
     fig_pib.update_yaxes(range=[-15, 20], zeroline=True, zerolinewidth=2, zerolinecolor="black")
-    
-
     fig_pib.update_layout(
         height=250, 
         margin=dict(l=20, r=20, t=20, b=20), 
         showlegend=False
     )
-    
     st.plotly_chart(fig_pib, use_container_width=True)
 # Diagrama Ratei Dobânzii
 with col4:
@@ -235,13 +222,10 @@ with col4:
 
 # Cele 4 diagrame Finish
 
-
 # Adăugare titlu la mijloc de pagină 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.title("Analiza comerțului internațional")
 # Subtittlu mijloc ecran
-
-
 
 # Crearea layout-ului cu două coloane
 col1, col2 = st.columns(2)
@@ -290,7 +274,6 @@ export_change = ((latest_data["Exporturi (mil. $)"] - previous_data["Exporturi (
 import_change = ((latest_data["Importuri (mil. $)"] - previous_data["Importuri (mil. $)"]) / abs(previous_data["Importuri (mil. $)"])) * 100 if previous_data["Importuri (mil. $)"] != 0 else 0
 
 
-
 # Text start
 def format_value(value):
     return locale.format_string("%.1f", value / 1000, grouping=True)
@@ -332,8 +315,6 @@ def generate_description(selected_month, latest_data, previous_data):
     """
 
 # st.markdown(generate_description(selected_month, latest_data, previous_data))
-
-
 # Text finish
 
 # Step 2: Strip any extra whitespace from the strings
@@ -386,7 +367,6 @@ else:
 
 
 
-
 # Curățăm și convertim coloana "An"
 df_exp_lunar["An"] = df_exp_lunar["An"].astype(str).str.replace(",", "").astype(int)
 
@@ -428,12 +408,8 @@ if not df_exports_filtered_Export.empty:
 
 
 
-
-
-
-
 # Creăm un layout cu două coloane
-col1, col2 = st.columns([1, 1])  # Jumătate-jumătate pentru text și grafic
+col1, col2 = st.columns([4, 1])  # Jumătate-jumătate pentru text și grafic
 
 # Filtrare date în funcție de luna selectată
 df_filtered = df[df["Lună"] == selected_month]
@@ -490,7 +466,7 @@ if df_countries_grouped.empty:
 else:
 # COL 1 - Descrierea textului, aliniat vertical
     with col1:
-        st.markdown('<div class="vertical-center">', unsafe_allow_html=True)
+        st.markdown('<div class="vertical-center" style="text-align: justify;">', unsafe_allow_html=True)
         
         st.subheader(f"Analiza schimburilor comerciale ({selected_month} {selected_year})")
         total_trade = df_countries_grouped["Total Comerț"].sum() / 1000
@@ -501,7 +477,9 @@ else:
         - **{max_country_group['Grupă Țări']}**, reprezentând **{max_country_group['Procent']}%** din total.
         - **Restul lumii** și **Statele CSI** constituind **{100 - max_country_group['Procent']}%** din schimburile comerciale.
         
-        În anul **{selected_year}** exporturile de produse autohtone au fost de **{exporturi_autohtone:,.1f} mil. dolari** în, iar reexporturile de mărfuri străine au fost de **{reexporturi:,.1f} mil. dolari**.
+      
+      În anul **{selected_year}** exporturile de produse autohtone au fost de **{exporturi_autohtone:,.1f} mil. dolari** în, iar reexporturile de mărfuri străine au fost de **{reexporturi:,.1f} mil. dolari**. 
+
         """)
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -511,8 +489,6 @@ else:
     # COL 2 - Afișarea graficului
     with col2:
         st.plotly_chart(fig_donut, use_container_width=True)
-
-
 
 # Definirea ordinii corecte pentru sortare
 month_order = {
@@ -535,13 +511,7 @@ df_total = df_total.sort_values(by="Sort_Index", ascending=True).drop(columns=["
 st.subheader(f"Evoluția {selected_indicator} (Perioadă - {selected_period})")
 fig = px.bar(df_total, x="Perioadă", y=selected_indicator, title=f"{selected_indicator} în timp", 
              labels={selected_indicator: "Valoare (mil. $)"}, barmode='relative')
-
 st.plotly_chart(fig, use_container_width=True)
-
-
-
-
-
 
 # Filtrare pentru perioada selectată
 df_grouped_filtered = df_grouped[df_grouped["Perioadă"] == selected_month ]
@@ -551,8 +521,6 @@ st.subheader(f"Tabel **{selected_indicator} {selected_year}** - {selected_month}
 if df_grouped_filtered.empty:
     st.warning(f"Nu există date pentru perioada selectată **{selected_month} {selected_year}.**")
 st.dataframe(df_grouped_filtered, use_container_width=True)
-
-
 
 # Eliminăm spațiile extra din coloana "Lună"
 df_influenta["Lună"] = df_influenta["Lună"].str.strip()
@@ -590,11 +558,6 @@ fig_influenta = px.bar(
 
 # Afișare grafic
 st.plotly_chart(fig_influenta, use_container_width=True)
-
-
-
-
-
 # Eliminăm spațiile extra din coloana "Lună"
 df_influenta_Import["Lună"] = df_influenta_Import["Lună"].str.strip()
 
@@ -603,7 +566,6 @@ df_influenta_filtered_import = df_influenta_Import[
     (df_influenta_Import["Lună"] == selected_month) & 
     (df_influenta_Import["An"].astype(str) == str(selected_year))
 ]
-
 # Dacă nu există date, afișăm un mesaj de eroare
 if df_influenta_filtered_import.empty:
     st.error(f" Nu sunt date pentru perioada selectată **{selected_month} {selected_year}.**")
@@ -629,21 +591,126 @@ fig_influenta_import = px.bar(
     height=600
 )
 
-
-# st.markdown("### Evoluția Indicatorilor Cheie (statistica.gov.md)")
-
-# comert_data = fetch_comert_data()
-# if comert_data:
-#     st.markdown(f"*Actualizat la: **{comert_data['data_actualizare']}***")
-#     for categorie, valori in comert_data["indicatori"].items():
-#         st.subheader(categorie)
-#         df_ind = pd.DataFrame(valori.items(), columns=["Perioada", "Valoare (%)"])
-#         st.dataframe(df_ind, use_container_width=True)
-# else:
-#     st.warning("Nu s-au putut extrage datele de pe pagina oficială.")
-
 # Afișare grafic
 st.plotly_chart(fig_influenta_import, use_container_width=True)
+
+
+
+# Mapping între perioadă și foaia Excel
+sheet_mapping = {
+    "Ianuarie": "Import_NCM_I",
+    "Ianuarie - Februarie": "Import_NCM_II",
+    "Ianuarie - Martie": "Import_NCM_III",
+    "Ianuarie - Aprilie": "Import_NCM_IV",
+}
+
+selected_sheet_name  = sheet_mapping.get(selected_month)
+
+df_import_ncm_all = load_data()[6]  # sau alt index dacă ai modificat ordinea returnării
+
+if isinstance(df_import_ncm_all, dict) and selected_sheet_name in df_import_ncm_all:
+    df_import_ncm_luna = df_import_ncm_all[selected_sheet_name]
+else:
+    st.error(f"Nu s-au găsit date pentru perioada {selected_month}")
+    st.stop()
+
+# --- Extrage doar rândurile cu cifre romane împreună cu filtrul de lună ---
+def is_roman(value):
+    return bool(re.match(
+        r"^(I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII|XIII|XIV|XV|XVI|XVII|XVIII|XIX|XX|XXI)$",
+        str(value).strip()
+    ))
+
+# --- Extractie grupe principale pe luna selectata ---
+df_import_grupe = df_import_ncm_luna[df_import_ncm_luna["Cod"].apply(is_roman)].copy()
+df_import_grupe["Denumire"] = df_import_grupe["Denumire"].str.strip()
+
+# Conversie la mil. $
+for col in ["2022", "2023", "2024", "2025"]:
+    df_import_grupe[col] = pd.to_numeric(df_import_grupe[col], errors="coerce") / 1000
+
+# Selectie grupe principale
+st.subheader(f"Evoluția *importurilor* pe grupele principale de mărfuri în  **{selected_month}.**")
+available_grupe = df_import_grupe["Denumire"].unique().tolist()
+selected_grupe = st.multiselect("Selectează grupele de mărfuri:", options=available_grupe, default=available_grupe)
+
+# Filtrare dupa selectie
+df_import_grupe_filtered = df_import_grupe[df_import_grupe["Denumire"].isin(selected_grupe)]
+
+# Reformatare pentru grafic
+df_import_melt = df_import_grupe_filtered.melt(id_vars="Denumire", value_vars=["2022", "2023", "2024", "2025"],
+                                                var_name="An", value_name="Importuri (mil. $)")
+df_import_melt["An"] = df_import_melt["An"].astype(int).astype(str)
+
+# Grafic importuri grupate
+fig_import_grupe = px.bar(
+    df_import_melt,
+    x="An",
+    y="Importuri (mil. $)",
+    color="Denumire",
+    barmode="group",
+    title="Evoluția valorică a importurilor – Grupe principale",
+    labels={"Denumire": "Grupă de mărfuri"}
+)
+st.plotly_chart(fig_import_grupe, use_container_width=True)
+
+# Tabel aferent
+st.dataframe(df_import_grupe_filtered.reset_index(drop=True), use_container_width=True)
+
+# --- Ponderi si comparatii 2024/2025 ---
+df_pondere = df_import_grupe_filtered.copy()
+total_2024 = df_pondere["2024"].sum()
+total_2025 = df_pondere["2025"].sum()
+df_pondere["Pondere 2024 (%)"] = (df_pondere["2024"] / total_2024) * 100
+df_pondere["Pondere 2025 (%)"] = (df_pondere["2025"] / total_2025) * 100
+df_pondere["Diferență (p.p.)"] = df_pondere["Pondere 2025 (%)"] - df_pondere["Pondere 2024 (%)"]
+
+# Reformatare pentru grafic
+df_pondere_melt = df_pondere.melt(id_vars="Denumire", 
+                                  value_vars=["Pondere 2024 (%)", "Pondere 2025 (%)"],
+                                  var_name="An", value_name="Pondere (%)")
+
+# Dicționar pentru scurtarea denumirilor
+denumiri_scurtate = {
+    "Animale vii si produse ale regnului animal": "Produse animale",
+    "Produse ale regnului vegetal": "Produse vegetale",
+    "Grasimi si uleiuri de origine animala sau vegetala si produse ale disocierii acestora; grasimi alimentare prelucrate; ceara de origine animala sau vegetala": "Grăsimi și uleiuri",
+    "Produse ale industriei alimentare; bauturi, lichide alcoolice si otet; tutun si inlocuitori de tutun": "Alimente, băuturi, tutun",
+    "Produse minerale": "Minerale",
+    "Masini si aparate, echipamente electrice si parti ale acestora; aparate de inregistrat sau de reprodus sunetul, aparate de inregistrat sau de reprodus imagini si sunet de televiziune si parti si accesorii ale acestor aparate": "Mașini și echipamente electrice",
+    "Incaltaminte; obiecte de acoperit capul, umbrele; umbrele de ploaie; umbrele de soare; bastoane-scaun;  bice; cravase si parti ale acestora; pene si puf prelucrate si articole din acestea; flori artificiale; articole din par uman": "Încălțăminte și accesorii",
+    "Articole din piatra, ipsos, ciment, azbest, mica sau din materiale similare; produse ceramice; sticla si articole din sticla": "Articole din piatră și sticlă",
+    "Pasta din lemn sau din alte materiale fibroase celulozice; hirtie sau carton reciclabile (deseuri si maculatura); hirtie, carton si articole din acestea": "Pastă din lemn, hârtie și accesorii",
+    "Produse ale industriei chimice sau ale industriilor conexe": "Industrie chimică",
+    "Materiale plastice si articole din material plastic; cauciuc si articole din cauciuc": "Plastice și cauciuc",
+    "Piei brute, piei finite, piei cu blana si produse din acestea; articole de curelarie si de selarie; articole de voiaj, genti de mina si articole similare; articole din intestine de animale (altele decit cele de la viermii de matase)": "Piei și blănuri",
+    "Lemn si articole din lemn, carbune de lemn si articole din lemn; pluta si articole din pluta; articole din paie, alfa si alte materiale de impletit; cosuri si alte impletituri": "Lemn și articole din lemn",
+    "Vehicule, aparate de zbor (aeronave), instalatii plutitoare si echipamente auxiliare": "Vehicule",
+    "IMPORT - total, mii dolari SUA": "Import total"
+}
+df_import_grupe_filtered["Denumire"] = df_import_grupe_filtered["Denumire"].replace(denumiri_scurtate)
+df_pondere["Denumire"] = df_pondere["Denumire"].replace(denumiri_scurtate)
+df_pondere_melt["Denumire"] = df_pondere_melt["Denumire"].replace(denumiri_scurtate)
+
+# Grafic comparativ pondere
+st.subheader(f"Ponderea fiecărei grupe în totalul importurilor: 2024 / 2025")
+fig_pondere = px.bar(
+    df_pondere_melt,
+    y="Denumire",
+    x="Pondere (%)",
+    color="An",
+    orientation="h",
+    barmode="group",
+    title="Compararea ponderii grupelor în totalul importurilor – 2024 / 2025",
+    labels={"Denumire": "Grupă de mărfuri"}
+)
+fig_pondere.update_layout(yaxis={'categoryorder': 'total ascending'})
+st.plotly_chart(fig_pondere, use_container_width=True)
+
+# Tabel final
+st.subheader("Tabel: Pondere 2024/2025")
+df_pondere_display = df_pondere[["Denumire", "Pondere 2024 (%)", "Pondere 2025 (%)"]].round(2)
+st.dataframe(df_pondere_display.reset_index(drop=True), use_container_width=True)
 
 st.markdown("""
     <hr style='border: 1px solid #ddd;'>
