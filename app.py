@@ -677,6 +677,7 @@ denumiri_scurtate = {
     "Grasimi si uleiuri de origine animala sau vegetala si produse ale disocierii acestora; grasimi alimentare prelucrate; ceara de origine animala sau vegetala": "Grăsimi și uleiuri",
     "Produse ale industriei alimentare; bauturi, lichide alcoolice si otet; tutun si inlocuitori de tutun": "Alimente, băuturi, tutun",
     "Produse minerale": "Minerale",
+    "Perle naturale sau de cultura, pietre pretioase sau semipretioase, metale pretioase, metale placate sau dublate cu metale pretioase si articole din aceste materiale; imitatii de bijuterii; monede": "Perle și bijuterii",
     "Masini si aparate, echipamente electrice si parti ale acestora; aparate de inregistrat sau de reprodus sunetul, aparate de inregistrat sau de reprodus imagini si sunet de televiziune si parti si accesorii ale acestor aparate": "Mașini și echipamente electrice",
     "Incaltaminte; obiecte de acoperit capul, umbrele; umbrele de ploaie; umbrele de soare; bastoane-scaun;  bice; cravase si parti ale acestora; pene si puf prelucrate si articole din acestea; flori artificiale; articole din par uman": "Încălțăminte și accesorii",
     "Articole din piatra, ipsos, ciment, azbest, mica sau din materiale similare; produse ceramice; sticla si articole din sticla": "Articole din piatră și sticlă",
@@ -685,6 +686,7 @@ denumiri_scurtate = {
     "Materiale plastice si articole din material plastic; cauciuc si articole din cauciuc": "Plastice și cauciuc",
     "Piei brute, piei finite, piei cu blana si produse din acestea; articole de curelarie si de selarie; articole de voiaj, genti de mina si articole similare; articole din intestine de animale (altele decit cele de la viermii de matase)": "Piei și blănuri",
     "Lemn si articole din lemn, carbune de lemn si articole din lemn; pluta si articole din pluta; articole din paie, alfa si alte materiale de impletit; cosuri si alte impletituri": "Lemn și articole din lemn",
+    "Instrumente si aparate optice, fotografice sau cinematografice, de masura, de control sau de precizie; instrumente si aparate medico-chirurgicale; ceasornicarie; instrumente muzicale; parti si accesorii ale acestora": "Instrumente și aparate optice",
     "Vehicule, aparate de zbor (aeronave), instalatii plutitoare si echipamente auxiliare": "Vehicule",
     "IMPORT - total, mii dolari SUA": "Import total"
 }
@@ -693,7 +695,7 @@ df_pondere["Denumire"] = df_pondere["Denumire"].replace(denumiri_scurtate)
 df_pondere_melt["Denumire"] = df_pondere_melt["Denumire"].replace(denumiri_scurtate)
 
 # Grafic comparativ pondere
-st.subheader(f"Ponderea fiecărei grupe în totalul importurilor: 2024 / 2025")
+st.subheader(f"Ponderea fiecărei grupe în totalul importurilor: 2024 vs 2025")
 fig_pondere = px.bar(
     df_pondere_melt,
     y="Denumire",
@@ -701,14 +703,14 @@ fig_pondere = px.bar(
     color="An",
     orientation="h",
     barmode="group",
-    title="Compararea ponderii grupelor în totalul importurilor – 2024 / 2025",
+    title="Compararea ponderii grupelor în totalul importurilor – 2024 vs 2025",
     labels={"Denumire": "Grupă de mărfuri"}
 )
 fig_pondere.update_layout(yaxis={'categoryorder': 'total ascending'})
 st.plotly_chart(fig_pondere, use_container_width=True)
 
 # Tabel final
-st.subheader("Tabel: Pondere 2024/2025")
+st.subheader("Tabel: Pondere 2024 - 2025")
 df_pondere_display = df_pondere[["Denumire", "Pondere 2024 (%)", "Pondere 2025 (%)"]].round(2)
 st.dataframe(df_pondere_display.reset_index(drop=True), use_container_width=True)
 
