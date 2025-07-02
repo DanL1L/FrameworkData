@@ -5,4 +5,3 @@ openpyxl
 PyPDF2
 langchain
 langchain-community
-statsmodels.api
