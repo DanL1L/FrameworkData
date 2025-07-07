@@ -708,7 +708,7 @@ denumiri_scurtate = {
     "Produse ale regnului vegetal": "Produse vegetale",
     "Grasimi si uleiuri de origine animala sau vegetala si produse ale disocierii acestora; grasimi alimentare prelucrate; ceara de origine animala sau vegetala": "Grăsimi și uleiuri",
     "Produse ale industriei alimentare; bauturi, lichide alcoolice si otet; tutun si inlocuitori de tutun": "Alimente, băuturi, tutun",
-    "Produse minerale": "Minerale",
+    "Produse minerale": "Produse minerale",
     "Perle naturale sau de cultura, pietre pretioase sau semipretioase, metale pretioase, metale placate sau dublate cu metale pretioase si articole din aceste materiale; imitatii de bijuterii; monede": "Perle și bijuterii",
     "Masini si aparate, echipamente electrice si parti ale acestora; aparate de inregistrat sau de reprodus sunetul, aparate de inregistrat sau de reprodus imagini si sunet de televiziune si parti si accesorii ale acestor aparate": "Mașini și echipamente electrice",
     "Incaltaminte; obiecte de acoperit capul, umbrele; umbrele de ploaie; umbrele de soare; bastoane-scaun;  bice; cravase si parti ale acestora; pene si puf prelucrate si articole din acestea; flori artificiale; articole din par uman": "Încălțăminte și accesorii",
