@@ -10,7 +10,7 @@ def load_data(file_path=os.path.join(os.path.dirname(__file__), '../data/Data.xl
     
     # Verificăm foile disponibile în fișier
     sheets = pd.ExcelFile(file_path).sheet_names
-    required_sheets = ["Start_Data", "Exp_Reexp", "Influenta_Export", "Influenta_Import", "Exp_Lunar", "Exp_imp_Total","Import_NCM_I", "Import_NCM_II", "Import_NCM_III"]
+    required_sheets = ["Start_Data", "Exp_Reexp", "Influenta_Export", "Influenta_Import", "Exp_Lunar", "Exp_imp_Total","Import_NCM_I", "Import_NCM_II", "Import_NCM_III","Import_NCM_IV"]
 
     # Asigurăm că toate foile necesare există
     for sheet in required_sheets:
@@ -70,3 +70,28 @@ def load_data(file_path=os.path.join(os.path.dirname(__file__), '../data/Data.xl
         df_import_ncm_all[sheet] = df_tmp
 
     return df, df_exp_reexp, df_influenta, df_influenta_Import, df_exp_lunar, df_exp_imp_Total, df_import_ncm_all
+
+
+def load_forecast_data():
+    path = "data/Model.xlsx"  # ajustează dacă fișierul e în altă locație
+    df_raw = pd.read_excel(path, sheet_name="EX_IM_gap model", header=None)
+
+    indicatori = [
+        "Real exports, mn USD",
+        "Real Imports, mn USD",
+        "Foreign demand, index",
+        "REER, index (increase =appreciation)",
+        "Exchange rate",
+        "Real investment, mn MDL"
+    ]
+
+    data = {}
+    for indicator in indicatori:
+        idx = df_raw[df_raw[0] == indicator].index[0]
+        values = df_raw.loc[idx, 2:26].values
+        data[indicator] = pd.to_numeric(values, errors="coerce")
+
+    df = pd.DataFrame(data)
+    df.index = list(range(2000, 2000 + len(df)))
+    df.index.name = "An"
+    return df
