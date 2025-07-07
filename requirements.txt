@@ -5,5 +5,6 @@ openpyxl
 PyPDF2
 langchain
 langchain-community
-statsmodels==0.14.0
-scipy==1.11.4
+selenium
+scipy>=1.10,<1.12
+statsmodels>=0.13,<0.14
