@@ -182,11 +182,11 @@ st.plotly_chart(fig, use_container_width=True)
 st.markdown("""
 **Metodologie:**
 
-Modelul utilizează regresie liniară (OLS) pentru a estima relația dintre exporturi/importuri reale și următorii factori explicativi:
+Modelul utilizează regresie liniară (OLS) pentru a estima relația dintre exporturi/importuri:
 - Cererea externă
 - Rata reală efectivă de schimb (REER)
 - Rata de schimb valutar
 - Investițiile reale
 
-Pe baza datelor istorice din perioada 2000–2024, modelul a estimat coeficienții și a aplicat o rată medie de creștere (CAGR) pentru a simula valorile din anii 2025–2028.
+Pe baza datelor istorice din perioada 2000–2024, modelul a estimat coeficienții și a aplicat o rată medie de creștere pentru a simula valorile din anii 2025–2028.
 """)

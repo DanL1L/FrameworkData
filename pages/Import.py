@@ -145,7 +145,7 @@ if cod_utilizator:
             st.metric(f"Pondere în cadrul secțiunii {ultimul_an}", f"{pondere_ultim:.2f}%")
             ultimul_an_total = df_total_pondere['Anul'].max()
             pondere_total = df_total_pondere[df_total_pondere['Anul'] == ultimul_an_total]['Pondere total (%)'].values[0]
-            st.metric(f"Pondere în total exporturi în {ultimul_an_total}", f"{pondere_total:.2f}%")
+            st.metric(f"Pondere în total importuri în {ultimul_an_total}", f"{pondere_total:.2f}%")
 
         
          # === Principalele destinații după Țări ===
@@ -166,6 +166,11 @@ if cod_utilizator:
             )
             fig_tari.update_layout(yaxis={'categoryorder': 'total ascending'})
             st.plotly_chart(fig_tari, use_container_width=True)
+
+
+        
+
+        # === Distribuția pe An ===
 
         # === Destinații pe Grupe de țări (ex: UE, CSI) ===
         # if 'Grupe' in df.columns:
