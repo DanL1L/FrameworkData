@@ -132,39 +132,3 @@ if st.sidebar.button("Afișează datele"):
     else:
         st.error(f"Eroare API (POST): {r.status_code}")
 
-# === Opțional: Salvare în MongoDB ===
-st.sidebar.markdown("---")
-salvare_format = st.sidebar.radio("Salvează în:", ["Excel", "MongoDB"])
-btn = st.sidebar.button("Afișează și salvează datele")
-
-if btn:
-    r = requests.post(url_base, json=payload)
-    if r.status_code == 200:
-        try:
-            data = r.json()
-            valori = data["value"]
-            categorii = [list(data["dimension"][dim]["category"]["label"].values())
-                         for dim in data["dimension"] if dim not in ["id", "size"]]
-            index = pd.MultiIndex.from_product(categorii,
-                                               names=[dim for dim in data["dimension"] if dim not in ["id", "size"]])
-            df = pd.DataFrame(valori, index=index, columns=["Valoare"]).reset_index()
-
-            st.dataframe(df, use_container_width=True)
-
-            if salvare_format == "Excel":
-                output = BytesIO()
-                with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                    df.to_excel(writer, index=False, sheet_name="Date")
-                st.download_button("Descarcă Excel", output.getvalue(),
-                                   file_name="exporturi_importuri.xlsx",
-                                   mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-            elif salvare_format == "MongoDB":
-                client = MongoClient("mongodb://localhost:27017/")
-                db = client["statistica"]
-                collection = db["exporturi_importuri"]
-                collection.insert_many(df.to_dict(orient="records"))
-                st.success("Datele au fost salvate în MongoDB!")
-        except Exception as e:
-            st.error(f"Eroare la procesare: {str(e)}")
-    else:
-        st.error(f"Eroare API (POST): {r.status_code}")
