@@ -10,7 +10,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
 # ==========================
-# CONFIG STREAMLIT + STIL
+# CONFIG STREAMLIT
 # ==========================
 
 st.set_page_config(page_title="Indicatori macroeconomici", layout="wide")
@@ -526,63 +526,6 @@ def fetch_agri_data():
     })
     print(f"Agricultură: date actualizate la {data_actualizare}")
     return indicatori
-
-
-# ==========================
-# UI: BUTON ACTUALIZARE
-# ==========================
-
-st.sidebar.header("Date")
-if st.sidebar.button("Actualizează datele (site-ul BNS)"):
-    with st.spinner("Se actualizează datele....."):
-        try:
-            fetch_comert_data()
-        except Exception as e:
-            st.error(f"Eroare la actualizarea comerțului exterior: {e}")
-
-        try:
-            fetch_pib_data()
-        except Exception as e:
-            st.error(f"Eroare la actualizarea PIB: {e}")
-
-        try:
-            fetch_invest_data()
-        except Exception as e:
-            st.error(f"Eroare la actualizarea investițiilor: {e}")
-
-        try:
-            fetch_cpi_data()
-        except Exception as e:
-            st.error(f"Eroare la actualizarea IPC: {e}")
-
-        try:
-            fetch_pop_data()
-        except Exception as e:
-            st.error(f"Eroare la actualizarea populației: {e}")
-
-        try:
-            fetch_lab_data()
-        except Exception as e:
-            st.error(f"Eroare la actualizarea forței de muncă: {e}")
-
-        try:
-            fetch_wage_data()
-        except Exception as e:
-            st.error(f"Eroare la actualizarea câștigurilor salariale: {e}")
-
-        try:
-            fetch_industry_data()
-        except Exception as e:
-            st.error(f"Eroare la actualizarea industriei: {e}")
-
-        try:
-            fetch_agri_data()
-        except Exception as e:
-            st.error(f"Eroare la actualizarea agriculturii: {e}")
-
-    st.success("Actualizare finalizată.")
-
-
 # ==========================
 # 2. PIB, INVESTIȚII, IPC – 3 COLOANE
 # ==========================
@@ -932,3 +875,4 @@ with col_right:
             st.markdown(html, unsafe_allow_html=True)
     else:
         st.info("Nu există încă date salvate pentru forța de muncă. Rulează scraper-ul din sidebar.")
+
