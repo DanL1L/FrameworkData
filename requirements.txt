@@ -12,5 +12,4 @@ xlsxwriter
 BeautifulSoup
 selenium 
 webdriver
-selenium.webdriver.chrome.options 
-Options
+
