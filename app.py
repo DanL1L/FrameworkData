@@ -15,3 +15,4 @@ pg = st.navigation([main_page, page_2, page_3, page_4, page_5, page_6])
 # Run the selected page
 
 pg.run()
+
