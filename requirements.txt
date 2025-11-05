@@ -12,3 +12,5 @@ xlsxwriter
 beautifulsoup4
 selenium
 webdriver-manager
+chromium
+chromium-chromedriver
