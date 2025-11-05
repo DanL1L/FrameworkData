@@ -33,22 +33,7 @@ st.set_page_config(page_title='Macroeconomic', layout='wide')
 # Creare layout cu logo și titlu pe același rând
 col1, col2 = st.columns([1, 4])  # Prima coloană mai mică pentru logo, a doua mai mare pentru text
 
-with col1:
-     logo_path = os.path.join(os.getcwd(), "data", "logo.svg")
-     st.image(logo_path, width=200)
-
-with col2:
-    st.markdown("""
-        <h1 style='color: #1f4e79;'> Principalii Indicatori macroeconomici</h1>
-        <p><strong>Analiza și Prognozare Macroeconomică</strong></p>
-         <p style='text-align: justify;'>Această pagină oferă o <strong>monitorizare și analiză</strong> a situației macroeconomice din Republica Moldova, prezentând informații despre <strong>importuri, 
-         exporturi și balanța comercială</strong>. Scopul principal este <strong>informarea factorilor de decizie</strong> - conducerea ministerului, instituțiile de stat, organizațiile internaționale și publicul larg.
-          Prin analiza datelor comerciale și prognozele economice pe termen mediu, contribuim la eficientizarea procesului de luare a deciziilor, inclusiv la <strong>elaborarea Cadrului Bugetar pe 
-          Termen Mediu și a Legii bugetului de stat</strong>.</p>
-    """, unsafe_allow_html=True)
-
-st.markdown("<hr>", unsafe_allow_html=True)
-
+st.title("Sectorul Extern")
 # Încărcarea datelor
 df, df_exports, df_influenta, df_influenta_Import, df_exp_lunar, df_exp_imp_total, df_import_ncm_all  = load_data()
 
@@ -634,6 +619,7 @@ sheet_mapping = {
     "Ianuarie - Februarie": "Import_NCM_II",
     "Ianuarie - Martie": "Import_NCM_III",
     "Ianuarie - Aprilie": "Import_NCM_IV",
+    "Ianuarie - Mai": "Import_NCM_V",
 }
 
 selected_sheet_name  = sheet_mapping.get(selected_month)

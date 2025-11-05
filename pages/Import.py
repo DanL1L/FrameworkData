@@ -1,6 +1,8 @@
 import pandas as pd
 import streamlit as st
 import plotly.express as px
+from io import BytesIO
+
 
 st.set_page_config(page_title="Date import NCM 9 Cifre", layout="wide")
 st.markdown("# Date import NCM 9 Cifre")
@@ -12,6 +14,13 @@ def incarca_date(cale_fisier: str = "data/Import_Date_9_Cifre.xlsx") -> pd.DataF
     except Exception as e:
         st.error(f"Eroare la încărcarea fișierului: {e}")
         return pd.DataFrame()
+
+
+def export_excel(df: pd.DataFrame, sheet_name: str = "Date_Import") -> bytes:
+    buffer = BytesIO()
+    with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
+        df.to_excel(writer, sheet_name=sheet_name, index=False)
+    return buffer.getvalue()
 
 def curata_coduri(df: pd.DataFrame) -> pd.DataFrame:
     df['Cod_2'] = df['Cod_2'].astype(str).str.zfill(2)
@@ -69,6 +78,7 @@ if not df.empty:
     st.write(f"### Rezultate pentru anul **{an_selectat}**, cod NCM de **{nivel_cod} cifre**")
     st.dataframe(df_filtrat, use_container_width=True)
     st.caption(f"{len(df_filtrat)} rânduri afișate")
+
 
     # === Evoluție în timp doar dacă codul a fost introdus ===
 if cod_utilizator:
@@ -161,31 +171,17 @@ if cod_utilizator:
                 x='Valoarea, mii dolari SUA',
                 y='Tari',
                 orientation='h',
-                title='Top 10 țări (valoare totală) 2020 - 2024',
+                title='Top 10 țări (valoare totală) 2021 - 2024',
                 text_auto='.2s'
             )
             fig_tari.update_layout(yaxis={'categoryorder': 'total ascending'})
             st.plotly_chart(fig_tari, use_container_width=True)
 
 
-        
 
-        # === Distribuția pe An ===
-
-        # === Destinații pe Grupe de țări (ex: UE, CSI) ===
-        # if 'Grupe' in df.columns:
-        #     top_grupe = df_grafic.groupby('Grupe')['Valoarea, mii dolari SUA'].sum().reset_index()
-        #     top_grupe = top_grupe.sort_values(by='Valoarea, mii dolari SUA', ascending=False)
-
-        #     st.subheader("Distribuția pe grupe de țări")
-        #     st.dataframe(top_grupe, use_container_width=True)
-
-        #     fig_grupe = px.pie(
-        #         top_grupe,
-        #         names='Grupe',
-        #         values='Valoarea, mii dolari SUA',
-        #         title='Distribuția valorică pe grupe de țări'
-        #     )
-        #     st.plotly_chart(fig_grupe, use_container_width=True)
-
-
+st.download_button(
+    label="Descarcă tabelul în Excel",
+    data=export_excel(df_filtrat),
+    file_name=f"importuri_{an_selectat}_cod_{nivel_cod}.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)

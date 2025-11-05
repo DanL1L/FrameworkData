@@ -309,6 +309,5 @@ st.plotly_chart(fig2, use_container_width=True)
 st.markdown("""
 **Notă metodologică:** Prognozele sunt generate cu modele OLS individuale pentru fiecare indicator (
 exporturi/importuri de bunuri/servicii) folosind 3 variabile explicative: cursul de schimb (EUR),
-datoria externă brută și datoria guvernamentală externă. Valorile pentru 2025–2028 sunt generate pe trimestre
-folosind creșterea medie istorică.
+datoria externă  și datoria gov.
 """)

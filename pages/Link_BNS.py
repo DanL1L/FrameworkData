@@ -83,6 +83,9 @@ for nume_dim, cod in coduri_dim.items():
         "code": cod,
         "selection": {"filter": "item", "values": valori}
     })
+
+
+    
 # === Afișare date ===
 if st.sidebar.button("Afișează datele"):
     r = requests.post(url_base, json=payload)
@@ -106,11 +109,65 @@ if st.sidebar.button("Afișează datele"):
                 try:
                     parsed_date = datetime.strptime(raw_date, "%Y-%m-%d")
                     ultima_data = parsed_date.strftime("%d.%m.%Y")
+
+                    zile_diferenta = (datetime.today() - parsed_date).days
+                    if zile_diferenta <= 30:
+                         status = "🟢"
+                    else:
+                         status = "🔴"
+
                 except:
                     ultima_data = "n/a"
+                    status = "❓"
                 st.markdown(f"### {denumire}")
                 st.markdown(f"**Ultima actualizare:** `{ultima_data}`")
             st.dataframe(df, use_container_width=True)
+
+            # === Analiză specifică pentru frecvența anuală ===
+            if frecventa == "Anual":
+                st.subheader(" Evoluția anuală și ratele de creștere (%)")
+
+                try:
+                    # Grupare valori anuale
+                    df_total = df.groupby(["Indicatori", "Ani"])["Valoare"].sum().reset_index()
+                    df_total.sort_values(["Indicatori", "Ani"], inplace=True)
+
+                    # Calcul rată de creștere
+                    df_total["Valoare_lag"] = df_total.groupby("Indicatori")["Valoare"].shift(1)
+                    df_total["Rată (%)"] = ((df_total["Valoare"] - df_total["Valoare_lag"]) / df_total["Valoare_lag"] * 100).round(2)
+
+                    # Pivot pentru afișare: 2 rânduri per indicator (valoare și rată)
+                    df_val = df_total.pivot(index="Indicatori", columns="Ani", values="Valoare").round(2)
+                    df_rate = df_total.pivot(index="Indicatori", columns="Ani", values="Rată (%)").round(2)
+
+                     
+                    
+                    # Unim valorile și ratele într-un singur tabel cu etichete
+                    df_combined = pd.concat({
+                        'Valoare': df_val,
+                        'Rată (%)': df_rate
+                    }, axis=0).sort_index()
+
+                    st.dataframe(df_combined, use_container_width=True)
+
+                    # 2. Ponderi pe grupe de țări
+                    try:
+                        df_pie = df.groupby("Grupe de tari")["Valoare"].sum().reset_index()
+                        # Verificăm dacă există doar "Total"
+                        if len(df_pie) == 1 and df_pie["Grupe de tari"].iloc[0].lower() == "total":
+                            st.info("Diagrama circulară nu este afișată deoarece datele includ doar totalul.")
+                        else:
+                            st.markdown("#### Ponderi pe grupe de țări (cumulativ):")
+                            fig_pie = px.pie(df_pie, names="Grupe de tari", values="Valoare", title="Ponderea pe grupe de țări")
+                            st.plotly_chart(fig_pie, use_container_width=True)
+
+                    except Exception as e:
+                        st.warning(f"Nu s-a putut genera diagrama circulară: {e}")
+
+                except Exception as e:
+                    st.warning(f"Eroare la calculul și afișarea evoluției anuale: {e}")
+
+
             
             # Grafic
             col_timp = next((col for col in df.columns if any(x in col.lower() for x in ["an", "lun", "trimestru", "perioad"])), None)
@@ -132,3 +189,42 @@ if st.sidebar.button("Afișează datele"):
     else:
         st.error(f"Eroare API (POST): {r.status_code}")
 
+
+
+
+# # === Opțional: Salvare în MongoDB ===
+# st.sidebar.markdown("---")
+# salvare_format = st.sidebar.radio("Salvează în:", ["Excel", "MongoDB"])
+# btn = st.sidebar.button("Afișează și salvează datele")
+
+# if btn:
+#     r = requests.post(url_base, json=payload)
+#     if r.status_code == 200:
+#         try:
+#             data = r.json()
+#             valori = data["value"]
+#             categorii = [list(data["dimension"][dim]["category"]["label"].values())
+#                          for dim in data["dimension"] if dim not in ["id", "size"]]
+#             index = pd.MultiIndex.from_product(categorii,
+#                                                names=[dim for dim in data["dimension"] if dim not in ["id", "size"]])
+#             df = pd.DataFrame(valori, index=index, columns=["Valoare"]).reset_index()
+
+#             st.dataframe(df, use_container_width=True)
+
+#             if salvare_format == "Excel":
+#                 output = BytesIO()
+#                 with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+#                     df.to_excel(writer, index=False, sheet_name="Date")
+#                 st.download_button("Descarcă Excel", output.getvalue(),
+#                                    file_name="exporturi_importuri.xlsx",
+#                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+#             elif salvare_format == "MongoDB":
+#                 client = MongoClient("mongodb://localhost:27017/")
+#                 db = client["statistica"]
+#                 collection = db["exporturi_importuri"]
+#                 collection.insert_many(df.to_dict(orient="records"))
+#                 st.success("Datele au fost salvate în MongoDB!")
+#         except Exception as e:
+#             st.error(f"Eroare la procesare: {str(e)}")
+#     else:
+#         st.error(f"Eroare API (POST): {r.status_code}")

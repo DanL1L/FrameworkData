@@ -150,37 +150,58 @@ if cod_utilizator:
         
          # === Principalele destinații după Țări ===
         if 'Tari' in df.columns:
-            top_tari = df_grafic.groupby('Tari')['Valoarea, mii dolari SUA'].sum().reset_index()
+            df_grafic['Tari'] = df_grafic['Tari'].astype(str).str.strip()
+
+            top_tari = df_grafic[df_grafic['Anul'] == an_selectat] \
+                .groupby('Tari')['Valoarea, mii dolari SUA'].sum().reset_index()
+
             top_tari = top_tari.sort_values(by='Valoarea, mii dolari SUA', ascending=False).head(10)
 
-            # st.subheader(f"Top 10 țări de destinație pentru codul {cod_utilizator}")
-            # st.dataframe(top_tari, use_container_width=True)
+            st.subheader(f"Top 10 țări de destinație pentru codul {cod_utilizator} în {an_selectat}")
+            st.dataframe(top_tari, use_container_width=True)
 
             fig_tari = px.bar(
                 top_tari,
                 x='Valoarea, mii dolari SUA',
                 y='Tari',
                 orientation='h',
-                title='Top 10 țări de destinație (valoare totală) 2020 - 2024',
+                title=f'Distribuția valorică în {an_selectat}',
                 text_auto='.2s'
             )
             fig_tari.update_layout(yaxis={'categoryorder': 'total ascending'})
             st.plotly_chart(fig_tari, use_container_width=True)
 
-        # === Destinații pe Grupe de țări (ex: UE, CSI) ===
-        # if 'Grupe' in df.columns:
-        #     top_grupe = df_grafic.groupby('Grupe')['Valoarea, mii dolari SUA'].sum().reset_index()
-        #     top_grupe = top_grupe.sort_values(by='Valoarea, mii dolari SUA', ascending=False)
 
-        #     st.subheader("Distribuția pe grupe de țări")
-        #     st.dataframe(top_grupe, use_container_width=True)
+    # # === Destinații pe Grupe de țări (ex: UE, CSI, Alte) ===
+    #         if 'Grupe' in df.columns:
+    #             df_grupe = df[['Cod NCM', 'Tari', 'Anul', 'Grupe']].copy()
+    #             df_grupe['Cod selectat'] = df_grupe['Cod NCM'].astype(str).str.zfill(9)
+    #             df_grupe['Tari'] = df_grupe['Tari'].astype(str).str.strip()
+    #             df_grupe['Anul'] = pd.to_numeric(df_grupe['Anul'], errors='coerce').astype('Int64')
 
-        #     fig_grupe = px.pie(
-        #         top_grupe,
-        #         names='Grupe',
-        #         values='Valoarea, mii dolari SUA',
-        #         title='Distribuția valorică pe grupe de țări'
-        #     )
-        #     st.plotly_chart(fig_grupe, use_container_width=True)
+    #             df_grafic['Tari'] = df_grafic['Tari'].astype(str).str.strip()
+    #             df_grafic['Anul'] = pd.to_numeric(df_grafic['Anul'], errors='coerce').astype('Int64')
 
+    #             df_grafic = pd.merge(
+    #                 df_grafic,
+    #                 df_grupe[['Cod selectat', 'Tari', 'Anul', 'Grupe']],
+    #                 on=['Cod selectat', 'Tari', 'Anul'],
+    #                 how='left'
+    #             )
+
+    #             df_grafic['Grupe'] = df_grafic['Grupe'].fillna("Necunoscut")
+
+    #             top_grupe = df_grafic.groupby('Grupe')['Valoarea, mii dolari SUA'].sum().reset_index()
+    #             top_grupe = top_grupe.sort_values(by='Valoarea, mii dolari SUA', ascending=False)
+
+    #             st.subheader("Distribuția valorică pe grupe de țări")
+    #             st.dataframe(top_grupe, use_container_width=True)
+
+    #             fig_grupe = px.pie(
+    #                 top_grupe,
+    #                 names='Grupe',
+    #                 values='Valoarea, mii dolari SUA',
+    #                 title=f'Distribuția valorică pe grupe de țări pentru codul {cod_utilizator}'
+    #             )
+    #             st.plotly_chart(fig_grupe, use_container_width=True)
 
