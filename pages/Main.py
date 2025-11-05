@@ -532,8 +532,6 @@ def fetch_agri_data():
 # și FORȚA DE MUNCĂ (DREAPTA)
 # ==========================
 
-st.markdown("---")
-
 col_left, col_right = st.columns([1.1, 1])  # ușor mai lată coloana stângă
 
 # ----- STÂNGA: POPULAȚIE și CÂȘTIGURI -----
@@ -707,7 +705,7 @@ with col_agr:
     else:
         st.info("Nu există încă date salvate pentru agricultură. Rulează scraper-ul din sidebar.")
 
-
+st.markdown("---")
 # ==========================
 # 2. PIB, INVESTIȚII, IPC – 3 COLOANE
 # ==========================
@@ -874,6 +872,7 @@ else:
 
                     html += "</div>"
                     col.markdown(html, unsafe_allow_html=True)
+
 
 
 
