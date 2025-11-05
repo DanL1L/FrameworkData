@@ -626,6 +626,88 @@ with col_right:
         st.info("Nu există încă date salvate pentru forța de muncă. Rulează scraper-ul din sidebar.")
 
 
+
+# ==========================
+# 5. INDUSTRIE (stânga) & AGRICULTURĂ (dreapta)
+# ==========================
+
+st.markdown("---")
+col_ind, col_agr = st.columns(2)
+
+# ----- INDUSTRIE (STÂNGA) -----
+with col_ind:
+    ind_state = load_json_state(IND_STATE_FILE)
+    ind_data_actualizare = ind_state.get("data_actualizare")
+    ind_indicatori = ind_state.get("indicatori", {})
+
+    st.markdown(
+        "### Industrie",
+        unsafe_allow_html=True,
+    )
+
+    if ind_indicatori:
+        items = list(ind_indicatori.items())
+
+        for sectiune, perioade in items:
+            html = "<div class='kpi-card'>"
+            html += f"<div class='kpi-title'>{sectiune}</div>"
+
+            for perioada, valoare in perioade.items():
+                if isinstance(valoare, (int, float)):
+                    val_str = f"{valoare:,.1f}".replace(",", " ")
+                else:
+                    val_str = str(valoare)
+
+                html += (
+                    "<div class='kpi-item'>"
+                    f"<span class='kpi-period'>{perioada}</span>"
+                    f"<span class='kpi-value'>{val_str}</span>"
+                    "</div>"
+                )
+
+            html += "</div>"
+            st.markdown(html, unsafe_allow_html=True)
+    else:
+        st.info("Nu există încă date salvate pentru industrie. Rulează scraper-ul din sidebar.")
+
+
+# ----- AGRICULTURĂ (DREAPTA) -----
+with col_agr:
+    agr_state = load_json_state(AGR_STATE_FILE)
+    agr_data_actualizare = agr_state.get("data_actualizare")
+    agr_indicatori = agr_state.get("indicatori", {})
+
+    st.markdown(
+        "### Agricultură",
+        unsafe_allow_html=True,
+    )
+
+    if agr_indicatori:
+        items = list(agr_indicatori.items())
+
+        for sectiune, perioade in items:
+            html = "<div class='kpi-card'>"
+            html += f"<div class='kpi-title'>{sectiune}</div>"
+
+            for perioada, valoare in perioade.items():
+                if isinstance(valoare, (int, float)):
+                    val_str = f"{valoare:,.1f}".replace(",", " ")
+                else:
+                    val_str = str(valoare)
+
+                html += (
+                    "<div class='kpi-item'>"
+                    f"<span class='kpi-period'>{perioada}</span>"
+                    f"<span class='kpi-value'>{val_str}</span>"
+                    "</div>"
+                )
+
+            html += "</div>"
+            st.markdown(html, unsafe_allow_html=True)
+    else:
+        st.info("Nu există încă date salvate pentru agricultură. Rulează scraper-ul din sidebar.")
+
+
 # ==========================
 # 2. PIB, INVESTIȚII, IPC – 3 COLOANE
 # ==========================
@@ -796,85 +878,7 @@ else:
 
 
 
-# ==========================
-# 5. INDUSTRIE (stânga) & AGRICULTURĂ (dreapta)
-# ==========================
 
-st.markdown("---")
-col_ind, col_agr = st.columns(2)
-
-# ----- INDUSTRIE (STÂNGA) -----
-with col_ind:
-    ind_state = load_json_state(IND_STATE_FILE)
-    ind_data_actualizare = ind_state.get("data_actualizare")
-    ind_indicatori = ind_state.get("indicatori", {})
-
-    st.markdown(
-        "### Industrie",
-        unsafe_allow_html=True,
-    )
-
-    if ind_indicatori:
-        items = list(ind_indicatori.items())
-
-        for sectiune, perioade in items:
-            html = "<div class='kpi-card'>"
-            html += f"<div class='kpi-title'>{sectiune}</div>"
-
-            for perioada, valoare in perioade.items():
-                if isinstance(valoare, (int, float)):
-                    val_str = f"{valoare:,.1f}".replace(",", " ")
-                else:
-                    val_str = str(valoare)
-
-                html += (
-                    "<div class='kpi-item'>"
-                    f"<span class='kpi-period'>{perioada}</span>"
-                    f"<span class='kpi-value'>{val_str}</span>"
-                    "</div>"
-                )
-
-            html += "</div>"
-            st.markdown(html, unsafe_allow_html=True)
-    else:
-        st.info("Nu există încă date salvate pentru industrie. Rulează scraper-ul din sidebar.")
-
-
-# ----- AGRICULTURĂ (DREAPTA) -----
-with col_agr:
-    agr_state = load_json_state(AGR_STATE_FILE)
-    agr_data_actualizare = agr_state.get("data_actualizare")
-    agr_indicatori = agr_state.get("indicatori", {})
-
-    st.markdown(
-        "### Agricultură",
-        unsafe_allow_html=True,
-    )
-
-    if agr_indicatori:
-        items = list(agr_indicatori.items())
-
-        for sectiune, perioade in items:
-            html = "<div class='kpi-card'>"
-            html += f"<div class='kpi-title'>{sectiune}</div>"
-
-            for perioada, valoare in perioade.items():
-                if isinstance(valoare, (int, float)):
-                    val_str = f"{valoare:,.1f}".replace(",", " ")
-                else:
-                    val_str = str(valoare)
-
-                html += (
-                    "<div class='kpi-item'>"
-                    f"<span class='kpi-period'>{perioada}</span>"
-                    f"<span class='kpi-value'>{val_str}</span>"
-                    "</div>"
-                )
-
-            html += "</div>"
-            st.markdown(html, unsafe_allow_html=True)
-    else:
-        st.info("Nu există încă date salvate pentru agricultură. Rulează scraper-ul din sidebar.")
 
 
 
