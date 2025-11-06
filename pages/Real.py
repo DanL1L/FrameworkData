@@ -747,7 +747,7 @@ with tab_ind_tab:
 
     # ===== Contribuția subramurilor industriei prelucrătoare =====
     st.markdown("---")
-    st.markdown("#### Contribuția subramurilor industriei prelucrătoare la creșterea industriei prelucrătoare (p.p.)")
+    st.markdown("#### Contribuțiile la creșterea industriei prelucrătoare (p.p.)")
 
     if df_ind_prel is not None and not df_ind_prel.empty:
         years_prel = sorted(df_ind_prel["An"].dropna().unique())
@@ -850,3 +850,4 @@ with tab_inv:
     st.markdown("#### Investiții directe acumulate (mil. USD)")
     fig_fdi = px.line(df_real, x=COL_YEAR, y=COL_FDI, markers=True, template="simple_white")
     st.plotly_chart(fig_fdi, use_container_width=True)
+
