@@ -746,33 +746,41 @@ with tab_ind_tab:
             st.info("Nu s-au putut încărca indicii de industrie (foaia 'Industrie').")
 
     # ===== Contribuția subramurilor industriei prelucrătoare =====
-    st.markdown("---")
-    st.markdown("#### Contribuțiile la creșterea industriei prelucrătoare (p.p.)")
+st.markdown("---")
+st.markdown("#### Contribuția la creșterea industriei prelucrătoare (p.p.)")
 
-    if df_ind_prel is not None and not df_ind_prel.empty:
-        years_prel = sorted(df_ind_prel["An"].dropna().unique())
-        selected_ind_year = st.selectbox(
-            "Alege anul pentru contribuțiile industriei prelucrătoare:",
-            options=years_prel,
-            index=len(years_prel) - 1,
-        )
+if df_ind_prel is not None and not df_ind_prel.empty:
+    years_prel = sorted(df_ind_prel["An"].dropna().unique())
+    selected_ind_year = st.selectbox(
+        "Alege anul pentru contribuțiile industriei prelucrătoare:",
+        options=years_prel,
+        index=len(years_prel) - 1,
+    )
 
-        row_prel = df_ind_prel[df_ind_prel["An"] == selected_ind_year]
-        if not row_prel.empty:
-            r = row_prel.iloc[0]
+    row_prel = df_ind_prel[df_ind_prel["An"] == selected_ind_year]
+    if not row_prel.empty:
+        r = row_prel.iloc[0]
 
-            pp_cols = [c for c in df_ind_prel.columns if c.endswith(" (p.p.)")]
-            rows = []
-            for col in pp_cols:
-                val = r[col]
-                if pd.notna(val):
-                    name_clean = col.replace(" (p.p.)", "")
-                    rows.append((name_clean, val))
+        pp_cols = [c for c in df_ind_prel.columns if c.endswith(" (p.p.)")]
+        rows = []
+        for col in pp_cols:
+            val = r[col]
+            if pd.notna(val):
+                name_clean = col.replace(" (p.p.)", "")
+                rows.append((name_clean, float(val)))
 
-            if rows:
-                data_prel = pd.DataFrame(rows, columns=["Subramură", "Contribuție (p.p.)"])
+        if rows:
+            data_prel = pd.DataFrame(rows, columns=["Subramură", "Contribuție (p.p.)"])
+
+            # 🔹 eliminăm contribuțiile care sunt 0 după rotunjire la o zecimală
+            data_prel["Contribuție (p.p.)"] = data_prel["Contribuție (p.p.)"].astype(float)
+            data_prel = data_prel[data_prel["Contribuție (p.p.)"].round(1) != 0]
+
+            if not data_prel.empty:
                 data_prel = data_prel.sort_values("Contribuție (p.p.)", ascending=False)
-                data_prel["Etichetă"] = data_prel["Contribuție (p.p.)"].map(lambda x: f"{x:.1f}")
+                data_prel["Etichetă"] = data_prel["Contribuție (p.p.)"].map(
+                    lambda x: f"{x:.1f}"
+                )
 
                 fig_prel = px.bar(
                     data_prel,
@@ -790,11 +798,15 @@ with tab_ind_tab:
                 )
                 st.plotly_chart(fig_prel, use_container_width=True)
             else:
-                st.info("Nu s-au putut calcula contribuțiile pe subramuri pentru anul selectat.")
+                st.info(
+                    "Pentru anul selectat, toate contribuțiile sunt 0 (după rotunjire la o zecimală)."
+                )
         else:
-            st.info("Nu există date pentru anul selectat în foaia 'Industrie_Prel'.")
+            st.info("Nu s-au putut calcula contribuțiile pe subramuri pentru anul selectat.")
     else:
-        st.info("Nu s-au putut încărca datele din foaia 'Industrie_Prel'.")
+        st.info("Nu există date pentru anul selectat în foaia 'Industrie_Prel'.")
+else:
+    st.info("Nu s-au putut încărca datele din foaia 'Industrie_Prel'.")
 
 # =====================================================
 # TAB: PRODUCȚIA AGRICOLĂ
@@ -850,4 +862,3 @@ with tab_inv:
     st.markdown("#### Investiții directe acumulate (mil. USD)")
     fig_fdi = px.line(df_real, x=COL_YEAR, y=COL_FDI, markers=True, template="simple_white")
     st.plotly_chart(fig_fdi, use_container_width=True)
-
