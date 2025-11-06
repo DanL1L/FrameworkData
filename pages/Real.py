@@ -40,285 +40,685 @@ except FileNotFoundError:
     )
     st.stop()
 
-# Denumiri coloane – adaptează dacă în Excel sunt puțin diferite
-COL_YEAR = "An"
-COL_IND  = "Producția industrială, mil. lei"
-COL_AGR  = "Producția agricolă, mil. lei"
-COL_FDI  = "Investiţiile directe acumulate în Republica Moldova (stoc) (MBP6), mil. USD"
+COL_YEAR  = "An"
+COL_IND   = "Producția industrială, mil. lei"
+COL_AGR   = "Producția agricolă, mil. lei"
+COL_FDI   = "Investiţiile directe acumulate în Republica Moldova (stoc) (MBP6), mil. USD"
+COL_TRADE = "Comerț intern, mil. lei"
 
-# (opțional, pentru viitor)
-COL_TRADE = "Comerț intern, mil. lei"  # dacă vei adăuga ulterior în Real.xlsx
-
-# Curățări de bază – sector real
 df_real[COL_YEAR] = pd.to_numeric(df_real[COL_YEAR], errors="coerce").astype("Int64")
-
 numeric_cols_real = [c for c in [COL_IND, COL_AGR, COL_FDI, COL_TRADE] if c in df_real.columns]
 for col in numeric_cols_real:
     df_real[col] = pd.to_numeric(df_real[col], errors="coerce")
-
 df_real = df_real.dropna(subset=[COL_YEAR]).sort_values(COL_YEAR)
 
 # =====================================================
-# 1B. ÎNCĂRCAREA DATELOR – TRANSPORT (FOAIA „Tranport”)
+# 1B. TRANSPORT
 # =====================================================
 df_trans = None
-trans_load_error = None
-
-# denumiri coloane în foaia Tranport
-T_COL_YEAR = "An"
-T_COL_QTR  = "Trimestrul"
-T_COL_TOT_MARFURI = "Total mărfuri transportate, mii tone"
-T_COL_TOT_PAS     = "Total, mii pasageri"
-
 try:
-    df_trans = pd.read_excel(file_path, sheet_name="Tranport")  # denumirea foii exact cum ai spus
-    df_trans[T_COL_YEAR] = pd.to_numeric(df_trans[T_COL_YEAR], errors="coerce").astype("Int64")
-    df_trans[T_COL_QTR] = df_trans[T_COL_QTR].astype(str).str.strip()
-
-    # creăm un label text „Perioadă” (ex: 2021 T1)
-    df_trans["Perioadă"] = (
-        df_trans[T_COL_YEAR].astype(str) + " " +
-        df_trans[T_COL_QTR].str.replace("Trimestrul ", "T")
-    )
-
-    # asigurăm numeric pentru total mărfuri și total pasageri
-    for col in [T_COL_TOT_MARFURI, T_COL_TOT_PAS]:
-        if col in df_trans.columns:
-            df_trans[col] = pd.to_numeric(df_trans[col], errors="coerce")
-
-    df_trans = df_trans.dropna(subset=[T_COL_YEAR]).sort_values([T_COL_YEAR, T_COL_QTR])
-except Exception as e:
+    df_trans = pd.read_excel(file_path, sheet_name="Tranport")
+    df_trans["An"] = pd.to_numeric(df_trans["An"], errors="coerce").astype("Int64")
+    df_trans["Trimestrul"] = df_trans["Trimestrul"].astype(str)
+    df_trans["Perioadă"] = df_trans["An"].astype(str) + " " + df_trans["Trimestrul"].str.replace("Trimestrul ", "T")
+except Exception:
     df_trans = None
-    trans_load_error = str(e)
-
 
 # =====================================================
-# 2. FILTRU: AN (PE BAZA SECTORULUI REAL)
+# 1C. PIB PE RAMURI
+# =====================================================
+df_pib = None
+try:
+    df_pib = pd.read_excel(file_path, sheet_name="PIB")
+    df_pib["An"] = pd.to_numeric(df_pib["An"].astype(str).str.replace(",", ""), errors="coerce").astype("Int64")
+
+    # Creștere reală PIB (%): PIB comparabil_t / PIB curent_{t-1} - 1
+    df_pib["Creștere reală (%)"] = (
+        df_pib["PIB comparabil"] / df_pib["PIB curent"].shift(1) - 1
+    ) * 100
+except Exception:
+    df_pib = None
+
+# =====================================================
+# 1D. PIB PE UTILIZĂRI
+# =====================================================
+df_pib_use = None
+try:
+    df_pib_use = pd.read_excel(file_path, sheet_name="PIB_utilizari")
+    df_pib_use["An"] = pd.to_numeric(df_pib_use["An"].astype(str).str.replace(",", ""), errors="coerce").astype("Int64")
+except Exception:
+    df_pib_use = None
+
+# =====================================================
+# FILTRU AN
 # =====================================================
 years_available = sorted(df_real[COL_YEAR].unique())
-st.sidebar.header("Filtre")
-
+st.sidebar.header("Filtru")
 selected_year = st.sidebar.selectbox(
     "Selectează anul:",
     options=years_available,
     index=len(years_available) - 1
 )
-
-row_sel = df_real[df_real[COL_YEAR] == selected_year]
-if row_sel.empty:
-    st.error("Nu există date pentru anul selectat.")
-    st.stop()
-
-row_sel = row_sel.iloc[0]
-st.caption(f"Anul selectat: **{selected_year}**")
+st.caption(f"An selectat: **{selected_year}**")
 
 # =====================================================
-# 3. CARDURI KPI – NIVELUL INDICATORILOR (ANUAL)
+# PRIVIRE DE ANSAMBLU – TEXT + KPI-URI (CA LA SOCIAL)
 # =====================================================
-col1, col2, col3 = st.columns(3)
 
-col1.metric(
-    "Producția industrială",
-    f"{row_sel[COL_IND]:,.1f} mil. lei" if pd.notna(row_sel[COL_IND]) else "n/d"
-)
-col2.metric(
-    "Producția agricolă",
-    f"{row_sel[COL_AGR]:,.1f} mil. lei" if pd.notna(row_sel[COL_AGR]) else "n/d"
-)
-col3.metric(
-    "Investiții directe acumulate (stoc)",
-    f"{row_sel[COL_FDI]:,.1f} mil. USD" if pd.notna(row_sel[COL_FDI]) else "n/d"
-)
+# rânduri curente pentru anul selectat
+row_real_cur = df_real[df_real[COL_YEAR] == selected_year]
+row_real_cur = row_real_cur.iloc[0] if not row_real_cur.empty else None
 
-# =====================================================
-# 4. TEXT DESCRIPTIV + COMPARAȚIE CU ANUL PRECEDENT
-# =====================================================
+row_pib_cur = None
+if df_pib is not None:
+    tmp = df_pib[df_pib["An"] == selected_year]
+    if not tmp.empty:
+        row_pib_cur = tmp.iloc[0]
+
+# rânduri pentru anul precedent
 prev_year = selected_year - 1
-prev_row = df_real[df_real[COL_YEAR] == prev_year]
+row_real_prev = df_real[df_real[COL_YEAR] == prev_year]
+row_real_prev = row_real_prev.iloc[0] if not row_real_prev.empty else None
 
-text_parts = []
+row_pib_prev = None
+if df_pib is not None:
+    tmp_prev = df_pib[df_pib["An"] == prev_year]
+    if not tmp_prev.empty:
+        row_pib_prev = tmp_prev.iloc[0]
 
-def pct_change(curr, prev):
-    return (curr - prev) / prev * 100 if (pd.notna(prev) and prev != 0) else None
+def yoy(curr, prev):
+    if curr is None or prev is None:
+        return None
+    try:
+        if pd.isna(curr) or pd.isna(prev) or prev == 0:
+            return None
+    except Exception:
+        return None
+    return (curr / prev - 1) * 100
 
-if not prev_row.empty:
-    prev_row = prev_row.iloc[0]
+# valori curente
+ind_val  = row_real_cur[COL_IND] if row_real_cur is not None and COL_IND in row_real_cur else None
+agr_val  = row_real_cur[COL_AGR] if row_real_cur is not None and COL_AGR in row_real_cur else None
+fdi_val  = row_real_cur[COL_FDI] if row_real_cur is not None and COL_FDI in row_real_cur else None
+pib_cur  = row_pib_cur["PIB curent"] if row_pib_cur is not None and "PIB curent" in row_pib_cur else None
+pib_gr   = row_pib_cur["Creștere reală (%)"] if row_pib_cur is not None and "Creștere reală (%)" in row_pib_cur else None
 
-    ind_chg = pct_change(row_sel[COL_IND], prev_row[COL_IND])
-    agr_chg = pct_change(row_sel[COL_AGR], prev_row[COL_AGR])
-    fdi_chg = pct_change(row_sel[COL_FDI], prev_row[COL_FDI])
+# variații anuale
+ind_chg = yoy(ind_val, row_real_prev[COL_IND]) if row_real_prev is not None and COL_IND in row_real_prev else None
+agr_chg = yoy(agr_val, row_real_prev[COL_AGR]) if row_real_prev is not None and COL_AGR in row_real_prev else None
+fdi_chg = yoy(fdi_val, row_real_prev[COL_FDI]) if row_real_prev is not None and COL_FDI in row_real_prev else None
+pib_chg = yoy(pib_cur, row_pib_prev["PIB curent"]) if row_pib_prev is not None and "PIB curent" in row_pib_prev else None
 
-    text_parts.append(
-        f"În **{selected_year}**, producția industrială a constituit "
-        f"**{row_sel[COL_IND]:,.1f} mil. lei**, iar producția agricolă "
-        f"**{row_sel[COL_AGR]:,.1f} mil. lei**. "
-        f"Stocul investițiilor directe acumulate în Republica Moldova (MBP6) "
-        f"a atins **{row_sel[COL_FDI]:,.1f} mil. USD**."
+st.markdown("### Indicatori cheie")
+
+k1, k2, k3, k4, k5 = st.columns(5)
+
+k1.metric(
+    "PIB, mil. lei",
+    f"{pib_cur:,.0f}".replace(",", " ") if pib_cur is not None else "n/d",
+    (f"{pib_chg:.1f} %" if pib_chg is not None else None)
+)
+k2.metric(
+    "Creștere reală a PIB",
+    f"{pib_gr:.1f} %".replace(".", ",") if pib_gr is not None else "n/d",
+    None
+)
+k3.metric(
+    "Producția industrială",
+    f"{ind_val:,.1f} mil. lei".replace(",", " ") if ind_val is not None else "n/d",
+    (f"{ind_chg:.1f} %" if ind_chg is not None else None)
+)
+k4.metric(
+    "Producția agricolă",
+    f"{agr_val:,.1f} mil. lei".replace(",", " ") if agr_val is not None else "n/d",
+    (f"{agr_chg:.1f} %" if agr_chg is not None else None)
+)
+k5.metric(
+    "Investiții directe (stoc)",
+    f"{fdi_val:,.1f} mil. USD".replace(",", " ") if fdi_val is not None else "n/d",
+    (f"{fdi_chg:.1f} %" if fdi_chg is not None else None)
+)
+
+# text narativ, în stil similar cu pagina Social
+text_intro = []
+
+if pib_cur is not None:
+    text_intro.append(
+        f"În **{selected_year}**, PIB la prețuri curente a fost de "
+        f"**{pib_cur:,.0f}** lei.".replace(",", " ")
     )
 
-    text_parts.append(
-        f"Comparativ cu **{prev_year}**, producția industrială este "
-        f"{'mai mare' if ind_chg and ind_chg > 0 else 'mai mică'} cu "
-        f"**{abs(ind_chg):.1f}%**, iar producția agricolă "
-        f"{'a crescut' if agr_chg and agr_chg > 0 else 'a scăzut'} cu "
-        f"**{abs(agr_chg):.1f}%**. Stocul investițiilor directe "
-        f"{'este mai ridicat' if fdi_chg and fdi_chg > 0 else 'este mai redus'} "
-        f"cu **{abs(fdi_chg):.1f}%** față de anul precedent."
-    )
-else:
-    text_parts.append(
-        f"În **{selected_year}**, producția industrială a constituit "
-        f"**{row_sel[COL_IND]:,.1f} mil. lei**, producția agricolă "
-        f"**{row_sel[COL_AGR]:,.1f} mil. lei**, iar stocul investițiilor directe "
-        f"acumulate **{row_sel[COL_FDI]:,.1f} mil. USD**."
-    )
-    text_parts.append(
-        "Nu există date pentru anul precedent pentru a calcula variațiile anuale."
+if ind_val is not None or agr_val is not None or fdi_val is not None:
+    frag = "Sectorul real al economiei a înregistrat "
+    parts = []
+    if ind_val is not None:
+        parts.append(f"producție industrială de **{ind_val:,.1f} mil. lei**".replace(",", " "))
+    if agr_val is not None:
+        parts.append(f"producție agricolă de **{agr_val:,.1f} mil. lei**".replace(",", " "))
+    if fdi_val is not None:
+        parts.append(f"stoc al investițiilor directe de **{fdi_val:,.1f} mil. USD**".replace(",", " "))
+
+    if parts:
+        frag += ", ".join(parts) + "."
+        text_intro.append(frag)
+
+if pib_gr is not None:
+    text_intro.append(
+        f"Ritmul de **creștere reală** față de anul precedent a fost de "
+        f"**{pib_gr:.1f}%**.".replace(".", ",")
     )
 
-st.markdown("\n\n".join(text_parts))
+if prev_year in years_available and (ind_chg is not None or agr_chg is not None or fdi_chg is not None or pib_chg is not None):
+    comp_frag = f"Comparativ cu **{prev_year}**, "
+    comp_parts = []
+    if pib_chg is not None:
+        comp_parts.append(
+            f"PIB la prețuri curente este "
+            f"{'mai mare' if pib_chg > 0 else 'mai mic'} cu **{abs(pib_chg):.1f}%**"
+        )
+    if ind_chg is not None:
+        comp_parts.append(
+            f"producția industrială este "
+            f"{'mai mare' if ind_chg > 0 else 'mai mică'} cu **{abs(ind_chg):.1f}%**"
+        )
+    if agr_chg is not None:
+        comp_parts.append(
+            f"producția agricolă este "
+            f"{'mai mare' if agr_chg > 0 else 'mai mică'} cu **{abs(agr_chg):.1f}%**"
+        )
+    if fdi_chg is not None:
+        comp_parts.append(
+            f"stocul de investiții directe este "
+            f"{'mai ridicat' if fdi_chg > 0 else 'mai redus'} cu **{abs(fdi_chg):.1f}%**"
+        )
+
+    if comp_parts:
+        comp_frag += ", ".join(comp_parts) + "."
+        text_intro.append(comp_frag)
+
+if text_intro:
+    st.markdown("\n\n".join(text_intro))
 
 # =====================================================
-# 5. TAB-URI PE COMPONENTE ALE SECTORULUI REAL
+# TAB-URI (PIB primul)
 # =====================================================
 st.markdown("---")
 st.subheader("Componentele sectorului real")
 
-df_plot = df_real.copy()
-
-tab_ind, tab_agr, tab_trade, tab_trans_tab, tab_inv = st.tabs([
+tab_pib, tab_ind, tab_agr, tab_trade, tab_trans, tab_inv = st.tabs([
+    "PIB",
     "Producția industrială",
     "Producția agricolă",
     "Comerț intern",
-    "Transport auto",
-    "Investiții directe"
+    "Transport",
+    "Investiții directe",
 ])
 
-# ---- TAB: PRODUCȚIA INDUSTRIALĂ ----
-with tab_ind:
-    st.markdown("#### Evoluția producției industriale (mil. lei)")
-    fig_ind = px.line(
-        df_plot,
-        x=COL_YEAR,
-        y=COL_IND,
-        labels={COL_YEAR: "An", COL_IND: "mil. lei"},
-        template="simple_white",
-    )
-    fig_ind.update_traces(mode="lines+markers", line=dict(width=3))
-    fig_ind.update_layout(margin=dict(l=40, r=20, t=40, b=60))
-    st.plotly_chart(fig_ind, use_container_width=True)
+# =====================================================
+# TAB: PIB
+# =====================================================
+with tab_pib:
+    st.markdown("### Produsul Intern Brut (PIB)")
 
-# ---- TAB: PRODUCȚIA AGRICOLĂ ----
-with tab_agr:
-    st.markdown("#### Evoluția producției agricole (mil. lei)")
-    fig_agr = px.line(
-        df_plot,
-        x=COL_YEAR,
-        y=COL_AGR,
-        labels={COL_YEAR: "An", COL_AGR: "mil. lei"},
-        template="simple_white",
-    )
-    fig_agr.update_traces(mode="lines+markers", line=dict(width=3))
-    fig_agr.update_layout(margin=dict(l=40, r=20, t=40, b=60))
-    st.plotly_chart(fig_agr, use_container_width=True)
-
-# ---- TAB: COMERȚ INTERN ----
-with tab_trade:
-    st.markdown("#### Comerț intern (mil. lei)")
-
-    if COL_TRADE in df_plot.columns:
-        fig_trade = px.line(
-            df_plot,
-            x=COL_YEAR,
-            y=COL_TRADE,
-            labels={COL_YEAR: "An", COL_TRADE: "mil. lei"},
-            template="simple_white",
-        )
-        fig_trade.update_traces(mode="lines+markers", line=dict(width=3))
-        fig_trade.update_layout(margin=dict(l=40, r=20, t=40, b=60))
-        st.plotly_chart(fig_trade, use_container_width=True)
-    else:
-        st.info(
-            "Nu există date."
-        )
-
-# ---- TAB: TRANSPORT AUTO (din foaia „Tranport”) ----
-with tab_trans_tab:
-    st.markdown("#### Transport auto și alte moduri de transport")
-
-    if df_trans is None:
-        msg = "Nu s-au putut încărca datele de transport (foaia `Tranport`)."
-        if trans_load_error:
-            msg += f"<br/><span style='font-size:0.8rem;color:#6b7280;'>Detalii: {trans_load_error}</span>"
-        st.markdown(msg, unsafe_allow_html=True)
-    elif not all(col in df_trans.columns for col in [T_COL_TOT_MARFURI, T_COL_TOT_PAS]):
-        st.info(
-            "Foaia **`Tranport`** a fost găsită, dar lipsesc coloanele:\n\n"
-            f"- `{T_COL_TOT_MARFURI}` sau\n"
-            f"- `{T_COL_TOT_PAS}`.\n\n"
-            "Verifică denumirile coloanelor în Excel."
-        )
-    else:
-        # KPI pentru ultimul trimestru
-        last_row = df_trans.dropna(subset=[T_COL_TOT_MARFURI, T_COL_TOT_PAS]).iloc[-1]
-        last_period = last_row["Perioadă"]
-
-        k1, k2 = st.columns(2)
-        k1.metric(
-            f"Total mărfuri transportate ({last_period})",
-            f"{last_row[T_COL_TOT_MARFURI]:,.1f} mii tone".replace(",", " ")
-        )
-        k2.metric(
-            f"Total pasageri transportați ({last_period})",
-            f"{last_row[T_COL_TOT_PAS]:,.1f} mii persoane".replace(",", " ")
-        )
-
+    if df_pib is not None and not df_pib.empty:
+        # ---------------- PIB nivel + creștere reală ----------------
         col_left, col_right = st.columns(2)
 
-        # Grafic mărfuri
         with col_left:
-            st.markdown("##### Total mărfuri transportate (mii tone)")
+            st.markdown("#### PIB la prețuri curente (mil. lei)")
+            fig_pib_cur = px.line(
+                df_pib,
+                x="An",
+                y="PIB curent",
+                markers=True,
+                template="simple_white"
+            )
+            st.plotly_chart(fig_pib_cur, use_container_width=True)
+
+        with col_right:
+            st.markdown("#### Creștere reală a PIB (%)")
+
+            df_gr = df_pib.dropna(subset=["Creștere reală (%)"]).copy()
+            df_gr["label_gr"] = df_gr["Creștere reală (%)"].map(
+                lambda v: f"{v:.1f}".replace(".", ",")
+            )
+
+            fig_pib_real = px.line(
+                df_gr,
+                x="An",
+                y="Creștere reală (%)",
+                text="label_gr",
+                markers=True,
+                template="simple_white",
+                labels={
+                    "An": "An",
+                    "Creștere reală (%)": "% față de anul precedent"
+                }
+            )
+
+            fig_pib_real.add_hline(y=0, line_dash="dash", line_color="gray")
+            fig_pib_real.update_traces(
+                textposition="top center",
+                textfont=dict(size=11)
+            )
+            fig_pib_real.update_layout(
+                margin=dict(l=40, r=20, t=40, b=60)
+            )
+
+            st.plotly_chart(fig_pib_real, use_container_width=True)
+
+        # ---------------- Structură PIB pe ramuri (% din PIB) ----------------
+        st.markdown("#### Structura PIB pe ramuri (pondere în PIB, %)")
+
+        ramuri_cols = [
+            "Agricultura, silvicultura si pescuit curent",
+            "Industrie curent",
+            "Constructii curent",
+            "Servicii curent",
+            "Impozite nete pe produse curent",
+        ]
+
+        if all(c in df_pib.columns for c in ramuri_cols):
+            df_share = df_pib.dropna(subset=["PIB curent"] + ramuri_cols).copy()
+            for c in ramuri_cols:
+                df_share[c + "_share"] = df_share[c] / df_share["PIB curent"] * 100
+
+            df_share_long = df_share.melt(
+                id_vars=["An"],
+                value_vars=[c + "_share" for c in ramuri_cols],
+                var_name="Ramură",
+                value_name="Pondere (%)",
+            )
+            df_share_long["Ramură"] = (
+                df_share_long["Ramură"]
+                .str.replace("_share", "")
+                .str.replace(" curent", "")
+            )
+
+            fig_stack = px.bar(
+                df_share_long,
+                x="An",
+                y="Pondere (%)",
+                color="Ramură",
+                template="simple_white",
+                barmode="stack",
+            )
+            fig_stack.update_layout(yaxis=dict(range=[0, 100]))
+            st.plotly_chart(fig_stack, use_container_width=True)
+        else:
+            st.info("Nu există toate coloanele necesare pentru structura pe ramuri.")
+
+        # =====================================================
+        # CREȘTERI ANUALE ALE COMPONENTELOR
+        # =====================================================
+        st.markdown("---")
+
+        g_left, g_right = st.columns(2)
+
+        # ---- Creștere anuală pe RAMURI (resurse) ----
+        with g_left:
+            st.markdown("#### Creștere anuală – resurse")
+
+            ramuri_def = [
+                {
+                    "cur": "Agricultura, silvicultura si pescuit curent",
+                    "comp": "Agricultura, silvicultura si pescuit comparabil",
+                    "name": "Agricultură",
+                },
+                {
+                    "cur": "Industrie curent",
+                    "comp": "Industrie comparabil",
+                    "name": "Industrie",
+                },
+                {
+                    "cur": "Constructii curent",
+                    "comp": "Constructii comparabil",
+                    "name": "Construcții",
+                },
+                {
+                    "cur": "Servicii curent",
+                    "comp": "Servicii comparabil",
+                    "name": "Servicii",
+                },
+                {
+                    "cur": "Impozite nete pe produse curent",
+                    "comp": "Impozite nete pe produse comparabil",
+                    "name": "Impozite nete",
+                },
+            ]
+
+            df_g_ram = df_pib.copy()
+            series_ram = []
+
+            for cfg in ramuri_def:
+                cur_col = cfg["cur"]
+                comp_col = cfg["comp"]
+                nice_name = cfg["name"]
+
+                if cur_col in df_g_ram.columns and comp_col in df_g_ram.columns:
+                    denom = df_g_ram[cur_col].shift(1).replace(0, pd.NA)
+                    df_g_ram[nice_name] = (df_g_ram[comp_col] / denom) * 100 - 100
+                    series_ram.append(nice_name)
+
+            if series_ram:
+                df_long_ram = df_g_ram.dropna(subset=series_ram, how="all").melt(
+                    id_vars=["An"],
+                    value_vars=series_ram,
+                    var_name="Ramură",
+                    value_name="Creștere (%)",
+                )
+
+                fig_gr_ram = px.line(
+                    df_long_ram,
+                    x="An",
+                    y="Creștere (%)",
+                    color="Ramură",
+                    markers=True,
+                    template="simple_white",
+                )
+                fig_gr_ram.add_hline(y=0, line_dash="dash", line_color="gray")
+                st.plotly_chart(fig_gr_ram, use_container_width=True)
+            else:
+                st.info("Nu există date suficiente pentru creșterile anuale pe ramuri.")
+
+        # ---- Creștere anuală pe UTILIZĂRI ----
+        with g_right:
+            st.markdown("#### Creștere anuală – utilizări")
+
+            if df_pib_use is not None and not df_pib_use.empty:
+                utiliz_def = [
+                    {
+                        "cur": "Consumul final al gospodariilor populatiei curent",
+                        "comp": "Consumul final al gospodariilor populatiei comparabil",
+                        "name": "Consum gospodării",
+                    },
+                    {
+                        "cur": "Consumul final al administratiei publice curent",
+                        "comp": "Consumul final al administratiei publice comparabil",
+                        "name": "Consum public",
+                    },
+                    {
+                        "cur": "Formarea bruta de capital curent",
+                        "comp": "Formarea bruta de capital comparabil",
+                        "name": "Formare capital",
+                    },
+                    {
+                        "cur": "Export curent",
+                        "comp": "Export comparabil",
+                        "name": "Export",
+                    },
+                    {
+                        "cur": "Import curent",
+                        "comp": "Import comparabil",
+                        "name": "Import",
+                    },
+                ]
+
+                df_g_use = df_pib_use.copy()
+                series_use = []
+
+                for cfg in utiliz_def:
+                    cur_col = cfg["cur"]
+                    comp_col = cfg["comp"]
+                    nice_name = cfg["name"]
+
+                    if cur_col in df_g_use.columns and comp_col in df_g_use.columns:
+                        denom = df_g_use[cur_col].shift(1).replace(0, pd.NA)
+                        df_g_use[nice_name] = (df_g_use[comp_col] / denom) * 100 - 100
+                        series_use.append(nice_name)
+
+                if series_use:
+                    df_long_use = df_g_use.dropna(subset=series_use, how="all").melt(
+                        id_vars=["An"],
+                        value_vars=series_use,
+                        var_name="Utilizare",
+                        value_name="Creștere (%)",
+                    )
+                    fig_gr_use = px.line(
+                        df_long_use,
+                        x="An",
+                        y="Creștere (%)",
+                        color="Utilizare",
+                        markers=True,
+                        template="simple_white",
+                    )
+                    fig_gr_use.add_hline(y=0, line_dash="dash", line_color="gray")
+                    st.plotly_chart(fig_gr_use, use_container_width=True)
+                else:
+                    st.info("Nu există date suficiente pentru creșterile anuale pe utilizări.")
+            else:
+                st.info("Nu s-au încărcat datele pentru PIB_utilizari.")
+
+        # =====================================================
+        # CONTRIBUȚII LA CREȘTERE – RAMURI & UTILIZĂRI
+        # =====================================================
+        st.markdown("---")
+        st.markdown("### Contribuția la creșterea PIB (p.p.)")
+
+        # 1) Contribuții RAMURI
+        if all(
+            c in df_pib.columns for c in [
+                "Agricultura, silvicultura si pescuit curent",
+                "Industrie curent",
+                "Constructii curent",
+                "Servicii curent",
+                "Impozite nete pe produse curent",
+                "Agricultura, silvicultura si pescuit comparabil",
+                "Industrie comparabil",
+                "Constructii comparabil",
+                "Servicii comparabil",
+                "Impozite nete pe produse comparabil",
+            ]
+        ):
+            denom = df_pib["PIB curent"].shift(1).replace(0, pd.NA)
+            df_pib["Agricultură (p.p.)"] = (
+                df_pib["Agricultura, silvicultura si pescuit comparabil"]
+                - df_pib["Agricultura, silvicultura si pescuit curent"].shift(1)
+            ) / denom * 100
+            df_pib["Industrie (p.p.)"] = (
+                df_pib["Industrie comparabil"]
+                - df_pib["Industrie curent"].shift(1)
+            ) / denom * 100
+            df_pib["Construcții (p.p.)"] = (
+                df_pib["Constructii comparabil"]
+                - df_pib["Constructii curent"].shift(1)
+            ) / denom * 100
+            df_pib["Servicii (p.p.)"] = (
+                df_pib["Servicii comparabil"] - df_pib["Servicii curent"].shift(1)
+            ) / denom * 100
+            df_pib["Impozite nete (p.p.)"] = (
+                df_pib["Impozite nete pe produse comparabil"]
+                - df_pib["Impozite nete pe produse curent"].shift(1)
+            ) / denom * 100
+
+        # 2) Contribuții UTILIZĂRI
+        if df_pib_use is not None and not df_pib_use.empty:
+            if all(
+                c in df_pib_use.columns for c in [
+                    "Consumul final al gospodariilor populatiei curent",
+                    "Consumul final al administratiei publice curent",
+                    "Formarea bruta de capital curent",
+                    "Export curent",
+                    "Import curent",
+                    "Consumul final al gospodariilor populatiei comparabil",
+                    "Consumul final al administratiei publice comparabil",
+                    "Formarea bruta de capital comparabil",
+                    "Export comparabil",
+                    "Import comparabil",
+                    "PIB curent",
+                ]
+            ):
+                denom_u = df_pib_use["PIB curent"].shift(1).replace(0, pd.NA)
+                df_pib_use["Consum gospodării (p.p.)"] = (
+                    df_pib_use["Consumul final al gospodariilor populatiei comparabil"]
+                    - df_pib_use["Consumul final al gospodariilor populatiei curent"].shift(1)
+                ) / denom_u * 100
+                df_pib_use["Consum public (p.p.)"] = (
+                    df_pib_use["Consumul final al administratiei publice comparabil"]
+                    - df_pib_use["Consumul final al administratiei publice curent"].shift(1)
+                ) / denom_u * 100
+                df_pib_use["Formare capital (p.p.)"] = (
+                    df_pib_use["Formarea bruta de capital comparabil"]
+                    - df_pib_use["Formarea bruta de capital curent"].shift(1)
+                ) / denom_u * 100
+                df_pib_use["Export (p.p.)"] = (
+                    df_pib_use["Export comparabil"] - df_pib_use["Export curent"].shift(1)
+                ) / denom_u * 100
+                df_pib_use["Import (p.p.)"] = (
+                    df_pib_use["Import comparabil"] - df_pib_use["Import curent"].shift(1)
+                ) / denom_u * 100
+
+        # selectbox an pentru contribuții
+        all_years = sorted(
+            set(df_pib["An"].dropna().tolist())
+            | (set(df_pib_use["An"].dropna().tolist()) if df_pib_use is not None else set())
+        )
+        selected_contrib_year = st.selectbox(
+            "Alege anul pentru analiza contribuțiilor:",
+            options=all_years,
+            index=len(all_years) - 1,
+        )
+
+        c_left, c_right = st.columns(2)
+
+        # --- stânga: contribuții RAMURI ---
+        with c_left:
+            st.markdown("#### Contribuția resurselor (p.p.)")
+            row_r = df_pib[df_pib["An"] == selected_contrib_year]
+            if not row_r.empty and "Agricultură (p.p.)" in row_r.columns:
+                r = row_r.iloc[0]
+                data_r = pd.DataFrame({
+                    "Ramură": ["Agricultură", "Industrie", "Construcții", "Servicii", "Impozite nete"],
+                    "Contribuție (p.p.)": [
+                        r["Agricultură (p.p.)"],
+                        r["Industrie (p.p.)"],
+                        r["Construcții (p.p.)"],
+                        r["Servicii (p.p.)"],
+                        r["Impozite nete (p.p.)"],
+                    ]
+                }).dropna()
+
+                # Sortare descrescătoare
+                data_r = data_r.sort_values("Contribuție (p.p.)", ascending=False)
+
+                # Etichete cu o zecimală (poți schimba în virgulă dacă vrei)
+                data_r["Etichetă"] = data_r["Contribuție (p.p.)"].map(lambda x: f"{x:.1f}")
+
+                fig_r = px.bar(
+                    data_r,
+                    x="Ramură",
+                    y="Contribuție (p.p.)",
+                    text="Etichetă",
+                    template="simple_white",
+                )
+                fig_r.update_traces(textposition="outside", textfont=dict(size=11))
+                fig_r.add_hline(y=0, line_dash="dash", line_color="gray")
+                fig_r.update_layout(
+                    margin=dict(l=20, r=20, t=40, b=40),
+                    yaxis_title="p.p.",
+                )
+                st.plotly_chart(fig_r, use_container_width=True)
+            else:
+                st.info("Nu există date suficiente pentru contribuțiile pe ramuri.")
+
+        # --- dreapta: contribuții UTILIZĂRI ---
+        with c_right:
+            st.markdown("#### Contribuția utilizărilor (p.p.)")
+            if df_pib_use is not None and not df_pib_use.empty and "Consum gospodării (p.p.)" in df_pib_use.columns:
+                row_u = df_pib_use[df_pib_use["An"] == selected_contrib_year]
+                if not row_u.empty:
+                    u = row_u.iloc[0]
+                    data_u = pd.DataFrame({
+                        "Utilizare": [
+                            "Consum gospodării",
+                            "Consum public",
+                            "Formare capital",
+                            "Export",
+                            "Import",
+                        ],
+                        "Contribuție (p.p.)": [
+                            u["Consum gospodării (p.p.)"],
+                            u["Consum public (p.p.)"],
+                            u["Formare capital (p.p.)"],
+                            u["Export (p.p.)"],
+                            u["Import (p.p.)"],
+                        ],
+                    }).dropna()
+
+                    # Sortare descrescătoare
+                    data_u = data_u.sort_values("Contribuție (p.p.)", ascending=False)
+
+                    # Etichete cu o zecimală
+                    data_u["Etichetă"] = data_u["Contribuție (p.p.)"].map(lambda x: f"{x:.1f}")
+
+                    fig_u = px.bar(
+                        data_u,
+                        x="Utilizare",
+                        y="Contribuție (p.p.)",
+                        text="Etichetă",
+                        template="simple_white",
+                    )
+                    fig_u.update_traces(textposition="outside", textfont=dict(size=11))
+                    fig_u.add_hline(y=0, line_dash="dash", line_color="gray")
+                    fig_u.update_layout(
+                        margin=dict(l=20, r=20, t=40, b=40),
+                        yaxis_title="p.p.",
+                    )
+                    st.plotly_chart(fig_u, use_container_width=True)
+                else:
+                    st.info("Nu există date pentru anul selectat (utilizări).")
+            else:
+                st.info("Nu s-au calculat contribuțiile pe utilizări.")
+    else:
+        st.warning("Nu s-au putut încărca datele de PIB.")
+
+# =====================================================
+# RESTUL TAB-URILOR
+# =====================================================
+with tab_ind:
+    st.markdown("#### Evoluția producției industriale (mil. lei)")
+    fig_ind = px.line(df_real, x=COL_YEAR, y=COL_IND, markers=True, template="simple_white")
+    st.plotly_chart(fig_ind, use_container_width=True)
+
+with tab_agr:
+    st.markdown("#### Evoluția producției agricole (mil. lei)")
+    fig_agr = px.line(df_real, x=COL_YEAR, y=COL_AGR, markers=True, template="simple_white")
+    st.plotly_chart(fig_agr, use_container_width=True)
+
+with tab_trade:
+    st.markdown("#### Comerț intern (mil. lei)")
+    if COL_TRADE in df_real.columns:
+        fig_trade = px.line(df_real, x=COL_YEAR, y=COL_TRADE, markers=True, template="simple_white")
+        st.plotly_chart(fig_trade, use_container_width=True)
+    else:
+        st.info("Nu există date pentru comerțul intern.")
+
+with tab_trans:
+    if df_trans is not None:
+        st.markdown("#### Transport – mărfuri și pasageri")
+        c1, c2 = st.columns(2)
+        with c1:
             fig_marf = px.line(
                 df_trans,
                 x="Perioadă",
-                y=T_COL_TOT_MARFURI,
-                labels={"Perioadă": "Perioadă (an / trimestru)", T_COL_TOT_MARFURI: "mii tone"},
+                y="Total mărfuri transportate, mii tone",
+                markers=True,
                 template="simple_white",
             )
-            fig_marf.update_traces(mode="lines+markers", line=dict(width=3))
-            fig_marf.update_layout(
-                margin=dict(l=40, r=20, t=40, b=80),
-                xaxis_tickangle=-45,
-            )
             st.plotly_chart(fig_marf, use_container_width=True)
-
-        # Grafic pasageri
-        with col_right:
-            st.markdown("##### Total pasageri transportați (mii persoane)")
+        with c2:
             fig_pas = px.line(
                 df_trans,
                 x="Perioadă",
-                y=T_COL_TOT_PAS,
-                labels={"Perioadă": "Perioadă (an / trimestru)", T_COL_TOT_PAS: "mii pasageri"},
+                y="Total, mii pasageri",
+                markers=True,
                 template="simple_white",
             )
-            fig_pas.update_traces(mode="lines+markers", line=dict(width=3))
-            fig_pas.update_layout(
-                margin=dict(l=40, r=20, t=40, b=80),
-                xaxis_tickangle=-45,
-            )
             st.plotly_chart(fig_pas, use_container_width=True)
+    else:
+        st.info("Nu s-au putut încărca datele pentru transport.")
 
-# ---- TAB: INVESTIȚII DIRECTE ----
 with tab_inv:
-    st.markdown("#### Investiții directe acumulate (stoc, MBP6) – mil. USD")
-    fig_fdi = px.line(
-        df_plot,
-        x=COL_YEAR,
-        y=COL_FDI,
-        labels={COL_YEAR: "An", COL_FDI: "mil. USD"},
-        template="simple_white",
-    )
-    fig_fdi.update_traces(mode="lines+markers", line=dict(width=3))
-    fig_fdi.update_layout(margin=dict(l=40, r=20, t=40, b=60))
+    st.markdown("#### Investiții directe acumulate (mil. USD)")
+    fig_fdi = px.line(df_real, x=COL_YEAR, y=COL_FDI, markers=True, template="simple_white")
     st.plotly_chart(fig_fdi, use_container_width=True)
