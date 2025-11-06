@@ -258,14 +258,13 @@ tab_pib, tab_ind, tab_agr, tab_trade, tab_trans, tab_inv = st.tabs([
 # TAB: PIB
 # =====================================================
 with tab_pib:
-    st.markdown("### Produsul Intern Brut (PIB)")
 
     if df_pib is not None and not df_pib.empty:
         # ---------------- PIB nivel + creștere reală ----------------
         col_left, col_right = st.columns(2)
 
         with col_left:
-            st.markdown("#### PIB la prețuri curente (mil. lei)")
+            st.markdown("#### PIB (mil. lei)")
             fig_pib_cur = px.line(
                 df_pib,
                 x="An",
