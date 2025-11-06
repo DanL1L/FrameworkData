@@ -90,6 +90,48 @@ except Exception:
     df_pib_use = None
 
 # =====================================================
+# 1E. INDUSTRIE – INDICI (% față de anul precedent)
+# =====================================================
+df_ind = None
+try:
+    df_ind = pd.read_excel(file_path, sheet_name="Industrie")
+    df_ind["An"] = pd.to_numeric(df_ind["An"], errors="coerce").astype("Int64")
+    for col in df_ind.columns:
+        if col != "An":
+            df_ind[col] = pd.to_numeric(df_ind[col], errors="coerce")
+    df_ind = df_ind.dropna(subset=["An"]).sort_values("An")
+except Exception:
+    df_ind = None
+
+# =====================================================
+# 1F. INDUSTRIE PRELUCRĂTOARE – SUBRAMURI (pentru contribuții)
+# =====================================================
+df_ind_prel = None
+try:
+    df_ind_prel = pd.read_excel(file_path, sheet_name="Industrie_Prel")
+    df_ind_prel["An"] = pd.to_numeric(df_ind_prel["An"], errors="coerce").astype("Int64")
+
+    # conversie numerică pentru toate coloanele, în afară de "An"
+    for col in df_ind_prel.columns:
+        if col != "An":
+            df_ind_prel[col] = pd.to_numeric(df_ind_prel[col], errors="coerce")
+
+    df_ind_prel = df_ind_prel.dropna(subset=["An"]).sort_values("An")
+
+    # contribuții la creșterea industriei prelucrătoare:
+    # (subramură_t - subramură_{t-1}) / Industria prelucratoare_{t-1} * 100
+    BASE_INDUSTRY_COL = "Industria prelucratoare"
+    if BASE_INDUSTRY_COL in df_ind_prel.columns:
+        denom_ind = df_ind_prel[BASE_INDUSTRY_COL].shift(1).replace(0, pd.NA)
+        sub_cols = [c for c in df_ind_prel.columns if c not in ["An", BASE_INDUSTRY_COL]]
+
+        for c in sub_cols:
+            new_col = c + " (p.p.)"
+            df_ind_prel[new_col] = (df_ind_prel[c] - df_ind_prel[c].shift(1)) / denom_ind * 100
+except Exception:
+    df_ind_prel = None
+
+# =====================================================
 # FILTRU AN
 # =====================================================
 years_available = sorted(df_real[COL_YEAR].unique())
@@ -102,10 +144,9 @@ selected_year = st.sidebar.selectbox(
 st.caption(f"An selectat: **{selected_year}**")
 
 # =====================================================
-# PRIVIRE DE ANSAMBLU – TEXT + KPI-URI (CA LA SOCIAL)
+# PRIVIRE DE ANSAMBLU – TEXT + KPI
 # =====================================================
 
-# rânduri curente pentru anul selectat
 row_real_cur = df_real[df_real[COL_YEAR] == selected_year]
 row_real_cur = row_real_cur.iloc[0] if not row_real_cur.empty else None
 
@@ -115,7 +156,6 @@ if df_pib is not None:
     if not tmp.empty:
         row_pib_cur = tmp.iloc[0]
 
-# rânduri pentru anul precedent
 prev_year = selected_year - 1
 row_real_prev = df_real[df_real[COL_YEAR] == prev_year]
 row_real_prev = row_real_prev.iloc[0] if not row_real_prev.empty else None
@@ -136,14 +176,12 @@ def yoy(curr, prev):
         return None
     return (curr / prev - 1) * 100
 
-# valori curente
 ind_val  = row_real_cur[COL_IND] if row_real_cur is not None and COL_IND in row_real_cur else None
 agr_val  = row_real_cur[COL_AGR] if row_real_cur is not None and COL_AGR in row_real_cur else None
 fdi_val  = row_real_cur[COL_FDI] if row_real_cur is not None and COL_FDI in row_real_cur else None
 pib_cur  = row_pib_cur["PIB curent"] if row_pib_cur is not None and "PIB curent" in row_pib_cur else None
 pib_gr   = row_pib_cur["Creștere reală (%)"] if row_pib_cur is not None and "Creștere reală (%)" in row_pib_cur else None
 
-# variații anuale
 ind_chg = yoy(ind_val, row_real_prev[COL_IND]) if row_real_prev is not None and COL_IND in row_real_prev else None
 agr_chg = yoy(agr_val, row_real_prev[COL_AGR]) if row_real_prev is not None and COL_AGR in row_real_prev else None
 fdi_chg = yoy(fdi_val, row_real_prev[COL_FDI]) if row_real_prev is not None and COL_FDI in row_real_prev else None
@@ -179,7 +217,6 @@ k5.metric(
     (f"{fdi_chg:.1f} %" if fdi_chg is not None else None)
 )
 
-# text narativ, în stil similar cu pagina Social
 text_intro = []
 
 if pib_cur is not None:
@@ -197,7 +234,6 @@ if ind_val is not None or agr_val is not None or fdi_val is not None:
         parts.append(f"producție agricolă de **{agr_val:,.1f} mil. lei**".replace(",", " "))
     if fdi_val is not None:
         parts.append(f"stoc al investițiilor directe de **{fdi_val:,.1f} mil. USD**".replace(",", " "))
-
     if parts:
         frag += ", ".join(parts) + "."
         text_intro.append(frag)
@@ -231,7 +267,6 @@ if prev_year in years_available and (ind_chg is not None or agr_chg is not None 
             f"stocul de investiții directe este "
             f"{'mai ridicat' if fdi_chg > 0 else 'mai redus'} cu **{abs(fdi_chg):.1f}%**"
         )
-
     if comp_parts:
         comp_frag += ", ".join(comp_parts) + "."
         text_intro.append(comp_frag)
@@ -242,10 +277,9 @@ if text_intro:
 # =====================================================
 # TAB-URI (PIB primul)
 # =====================================================
-st.markdown("---")
 st.subheader("Componentele sectorului real")
 
-tab_pib, tab_ind, tab_agr, tab_trade, tab_trans, tab_inv = st.tabs([
+tab_pib, tab_ind_tab, tab_agr, tab_trade, tab_trans_tab, tab_inv = st.tabs([
     "PIB",
     "Producția industrială",
     "Producția agricolă",
@@ -509,26 +543,26 @@ with tab_pib:
                 "Impozite nete pe produse comparabil",
             ]
         ):
-            denom = df_pib["PIB curent"].shift(1).replace(0, pd.NA)
+            denom_pp = df_pib["PIB curent"].shift(1).replace(0, pd.NA)
             df_pib["Agricultură (p.p.)"] = (
                 df_pib["Agricultura, silvicultura si pescuit comparabil"]
                 - df_pib["Agricultura, silvicultura si pescuit curent"].shift(1)
-            ) / denom * 100
+            ) / denom_pp * 100
             df_pib["Industrie (p.p.)"] = (
                 df_pib["Industrie comparabil"]
                 - df_pib["Industrie curent"].shift(1)
-            ) / denom * 100
+            ) / denom_pp * 100
             df_pib["Construcții (p.p.)"] = (
                 df_pib["Constructii comparabil"]
                 - df_pib["Constructii curent"].shift(1)
-            ) / denom * 100
+            ) / denom_pp * 100
             df_pib["Servicii (p.p.)"] = (
                 df_pib["Servicii comparabil"] - df_pib["Servicii curent"].shift(1)
-            ) / denom * 100
+            ) / denom_pp * 100
             df_pib["Impozite nete (p.p.)"] = (
                 df_pib["Impozite nete pe produse comparabil"]
                 - df_pib["Impozite nete pe produse curent"].shift(1)
-            ) / denom * 100
+            ) / denom_pp * 100
 
         # 2) Contribuții UTILIZĂRI
         if df_pib_use is not None and not df_pib_use.empty:
@@ -597,10 +631,7 @@ with tab_pib:
                     ]
                 }).dropna()
 
-                # Sortare descrescătoare
                 data_r = data_r.sort_values("Contribuție (p.p.)", ascending=False)
-
-                # Etichete cu o zecimală (poți schimba în virgulă dacă vrei)
                 data_r["Etichetă"] = data_r["Contribuție (p.p.)"].map(lambda x: f"{x:.1f}")
 
                 fig_r = px.bar(
@@ -644,10 +675,7 @@ with tab_pib:
                         ],
                     }).dropna()
 
-                    # Sortare descrescătoare
                     data_u = data_u.sort_values("Contribuție (p.p.)", ascending=False)
-
-                    # Etichete cu o zecimală
                     data_u["Etichetă"] = data_u["Contribuție (p.p.)"].map(lambda x: f"{x:.1f}")
 
                     fig_u = px.bar(
@@ -672,27 +700,125 @@ with tab_pib:
         st.warning("Nu s-au putut încărca datele de PIB.")
 
 # =====================================================
-# RESTUL TAB-URILOR
+# TAB: PRODUCȚIA INDUSTRIALĂ
 # =====================================================
-with tab_ind:
-    st.markdown("#### Evoluția producției industriale (mil. lei)")
-    fig_ind = px.line(df_real, x=COL_YEAR, y=COL_IND, markers=True, template="simple_white")
-    st.plotly_chart(fig_ind, use_container_width=True)
+with tab_ind_tab:
 
+    c1, c2 = st.columns(2)
+
+    # stânga – nivelul producției industriale (mil. lei)
+    with c1:
+        st.markdown("#### Producția industrială (mil. lei)")
+        fig_ind_level = px.line(
+            df_real,
+            x=COL_YEAR,
+            y=COL_IND,
+            markers=True,
+            template="simple_white",
+        )
+        st.plotly_chart(fig_ind_level, use_container_width=True)
+
+    # dreapta – indici pe ramuri (Industrie)
+    with c2:
+        st.markdown("#### Indicii volumului producției industriale")
+
+        if df_ind is not None and not df_ind.empty:
+            cols_idx = [c for c in df_ind.columns if c != "An"]
+            fig_ind_idx = px.line(
+                df_ind,
+                x="An",
+                y=cols_idx,
+                markers=True,
+                template="simple_white",
+            )
+
+            # linia pentru "Industria total,%" întreruptă
+            for trace in fig_ind_idx.data:
+                if trace.name.strip().lower().startswith("industria total"):
+                    trace.line["dash"] = "dash"
+                    trace.line["width"] = 3
+                else:
+                    trace.line["width"] = 3
+
+            fig_ind_idx.add_hline(y=100, line_dash="dash", line_color="gray")
+            st.plotly_chart(fig_ind_idx, use_container_width=True)
+        else:
+            st.info("Nu s-au putut încărca indicii de industrie (foaia 'Industrie').")
+
+    # ===== Contribuția subramurilor industriei prelucrătoare =====
+    st.markdown("---")
+    st.markdown("#### Contribuția subramurilor industriei prelucrătoare la creșterea industriei prelucrătoare (p.p.)")
+
+    if df_ind_prel is not None and not df_ind_prel.empty:
+        years_prel = sorted(df_ind_prel["An"].dropna().unique())
+        selected_ind_year = st.selectbox(
+            "Alege anul pentru contribuțiile industriei prelucrătoare:",
+            options=years_prel,
+            index=len(years_prel) - 1,
+        )
+
+        row_prel = df_ind_prel[df_ind_prel["An"] == selected_ind_year]
+        if not row_prel.empty:
+            r = row_prel.iloc[0]
+
+            pp_cols = [c for c in df_ind_prel.columns if c.endswith(" (p.p.)")]
+            rows = []
+            for col in pp_cols:
+                val = r[col]
+                if pd.notna(val):
+                    name_clean = col.replace(" (p.p.)", "")
+                    rows.append((name_clean, val))
+
+            if rows:
+                data_prel = pd.DataFrame(rows, columns=["Subramură", "Contribuție (p.p.)"])
+                data_prel = data_prel.sort_values("Contribuție (p.p.)", ascending=False)
+                data_prel["Etichetă"] = data_prel["Contribuție (p.p.)"].map(lambda x: f"{x:.1f}")
+
+                fig_prel = px.bar(
+                    data_prel,
+                    x="Contribuție (p.p.)",
+                    y="Subramură",
+                    orientation="h",
+                    text="Etichetă",
+                    template="simple_white",
+                )
+                fig_prel.update_traces(textposition="outside", textfont=dict(size=9))
+                fig_prel.add_vline(x=0, line_dash="dash", line_color="gray")
+                fig_prel.update_layout(
+                    margin=dict(l=20, r=20, t=40, b=40),
+                    xaxis_title="p.p.",
+                )
+                st.plotly_chart(fig_prel, use_container_width=True)
+            else:
+                st.info("Nu s-au putut calcula contribuțiile pe subramuri pentru anul selectat.")
+        else:
+            st.info("Nu există date pentru anul selectat în foaia 'Industrie_Prel'.")
+    else:
+        st.info("Nu s-au putut încărca datele din foaia 'Industrie_Prel'.")
+
+# =====================================================
+# TAB: PRODUCȚIA AGRICOLĂ
+# =====================================================
 with tab_agr:
     st.markdown("#### Evoluția producției agricole (mil. lei)")
     fig_agr = px.line(df_real, x=COL_YEAR, y=COL_AGR, markers=True, template="simple_white")
     st.plotly_chart(fig_agr, use_container_width=True)
 
+# =====================================================
+# TAB: COMERȚ INTERN
+# =====================================================
 with tab_trade:
     st.markdown("#### Comerț intern (mil. lei)")
     if COL_TRADE in df_real.columns:
         fig_trade = px.line(df_real, x=COL_YEAR, y=COL_TRADE, markers=True, template="simple_white")
         st.plotly_chart(fig_trade, use_container_width=True)
     else:
-        st.info("Nu există date pentru comerțul intern.")
+        st.info("Nu sunt date.")
 
-with tab_trans:
+# =====================================================
+# TAB: TRANSPORT
+# =====================================================
+with tab_trans_tab:
     if df_trans is not None:
         st.markdown("#### Transport – mărfuri și pasageri")
         c1, c2 = st.columns(2)
@@ -717,6 +843,9 @@ with tab_trans:
     else:
         st.info("Nu s-au putut încărca datele pentru transport.")
 
+# =====================================================
+# TAB: INVESTIȚII DIRECTE
+# =====================================================
 with tab_inv:
     st.markdown("#### Investiții directe acumulate (mil. USD)")
     fig_fdi = px.line(df_real, x=COL_YEAR, y=COL_FDI, markers=True, template="simple_white")
