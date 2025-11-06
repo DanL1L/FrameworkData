@@ -325,11 +325,11 @@ with tab_pib:
             df_share_long = df_share.melt(
                 id_vars=["An"],
                 value_vars=[c + "_share" for c in ramuri_cols],
-                var_name="Ramură",
+                var_name="Resurse",
                 value_name="Pondere (%)",
             )
-            df_share_long["Ramură"] = (
-                df_share_long["Ramură"]
+            df_share_long["Resurse"] = (
+                df_share_long["Resurse"]
                 .str.replace("_share", "")
                 .str.replace(" curent", "")
             )
@@ -338,7 +338,7 @@ with tab_pib:
                 df_share_long,
                 x="An",
                 y="Pondere (%)",
-                color="Ramură",
+                color="Resurse",
                 template="simple_white",
                 barmode="stack",
             )
@@ -403,7 +403,7 @@ with tab_pib:
                 df_long_ram = df_g_ram.dropna(subset=series_ram, how="all").melt(
                     id_vars=["An"],
                     value_vars=series_ram,
-                    var_name="Ramură",
+                    var_name="Resurse",
                     value_name="Creștere (%)",
                 )
 
@@ -411,7 +411,7 @@ with tab_pib:
                     df_long_ram,
                     x="An",
                     y="Creștere (%)",
-                    color="Ramură",
+                    color="Resurse",
                     markers=True,
                     template="simple_white",
                 )
@@ -587,7 +587,7 @@ with tab_pib:
             if not row_r.empty and "Agricultură (p.p.)" in row_r.columns:
                 r = row_r.iloc[0]
                 data_r = pd.DataFrame({
-                    "Ramură": ["Agricultură", "Industrie", "Construcții", "Servicii", "Impozite nete"],
+                    "Resurse": ["Agricultură", "Industrie", "Construcții", "Servicii", "Impozite nete"],
                     "Contribuție (p.p.)": [
                         r["Agricultură (p.p.)"],
                         r["Industrie (p.p.)"],
@@ -605,7 +605,7 @@ with tab_pib:
 
                 fig_r = px.bar(
                     data_r,
-                    x="Ramură",
+                    x="Resurse",
                     y="Contribuție (p.p.)",
                     text="Etichetă",
                     template="simple_white",
