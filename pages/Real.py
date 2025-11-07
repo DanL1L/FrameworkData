@@ -958,8 +958,6 @@ with tab_trans_tab:
             fig_pas.update_layout(yaxis_title="mii pasageri", xaxis_title="")
             st.plotly_chart(fig_pas, use_container_width=True)
 
-        st.markdown("---")
-
         # --- 2) STRUCTURA TRANSPORTULUI ---
         st.markdown("### Structura transportului pe tipuri de transport")
 
