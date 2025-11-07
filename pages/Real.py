@@ -64,6 +64,40 @@ try:
 except Exception:
     df_trans = None
 
+
+# =====================================================
+# 1G. AGRICULTURĂ – INDICI TRIMESTRIALI (% față de anul precedent)
+# =====================================================
+df_agr_q = None
+try:
+    df_agr_q = pd.read_excel(file_path, sheet_name="Agricultura")
+
+    # conversii de tip
+    df_agr_q["An"] = pd.to_numeric(df_agr_q["An"], errors="coerce").astype("Int64")
+    df_agr_q["Trimestrul"] = df_agr_q["Trimestrul"].astype(str)
+
+    # construire etichetă pentru axa X (ex: "2023 trim. I")
+    df_agr_q["Perioadă"] = (
+        df_agr_q["An"].astype(str)
+        + " "
+        + df_agr_q["Trimestrul"].str.replace("Trimestrul ", "trim. ")
+    )
+
+    # coloanele cu indici (în procente)
+    COL_AGR_TOT = "Producția agricolă total, %"
+    COL_AGR_VEG = "Producția vegetală"
+    COL_AGR_ANIM = "Producția animalieră"
+
+    for c in [COL_AGR_TOT, COL_AGR_VEG, COL_AGR_ANIM]:
+        if c in df_agr_q.columns:
+            df_agr_q[c] = pd.to_numeric(df_agr_q[c], errors="coerce")
+
+    # sortare corectă după an și trimestru
+    df_agr_q = df_agr_q.dropna(subset=["An"]).sort_values(["An", "Trimestrul"])
+except Exception:
+    df_agr_q = None
+
+
 # =====================================================
 # 1C. PIB PE RAMURI
 # =====================================================
@@ -746,75 +780,139 @@ with tab_ind_tab:
             st.info("Nu s-au putut încărca indicii de industrie (foaia 'Industrie').")
 
     # ===== Contribuția subramurilor industriei prelucrătoare =====
-st.markdown("---")
-st.markdown("#### Contribuția la creșterea industriei prelucrătoare (p.p.)")
+    st.markdown("---")
+    st.markdown("#### Contribuția la creșterea industriei prelucrătoare (p.p.)")
 
-if df_ind_prel is not None and not df_ind_prel.empty:
-    years_prel = sorted(df_ind_prel["An"].dropna().unique())
-    selected_ind_year = st.selectbox(
-        "Alege anul pentru contribuțiile industriei prelucrătoare:",
-        options=years_prel,
-        index=len(years_prel) - 1,
-    )
+    if df_ind_prel is not None and not df_ind_prel.empty:
+        years_prel = sorted(df_ind_prel["An"].dropna().unique())
+        selected_ind_year = st.selectbox(
+            "Alege anul pentru contribuțiile industriei prelucrătoare:",
+            options=years_prel,
+            index=len(years_prel) - 1,
+        )
 
-    row_prel = df_ind_prel[df_ind_prel["An"] == selected_ind_year]
-    if not row_prel.empty:
-        r = row_prel.iloc[0]
+        row_prel = df_ind_prel[df_ind_prel["An"] == selected_ind_year]
+        if not row_prel.empty:
+            r = row_prel.iloc[0]
 
-        pp_cols = [c for c in df_ind_prel.columns if c.endswith(" (p.p.)")]
-        rows = []
-        for col in pp_cols:
-            val = r[col]
-            if pd.notna(val):
-                name_clean = col.replace(" (p.p.)", "")
-                rows.append((name_clean, float(val)))
+            pp_cols = [c for c in df_ind_prel.columns if c.endswith(" (p.p.)")]
+            rows = []
+            for col in pp_cols:
+                val = r[col]
+                if pd.notna(val):
+                    name_clean = col.replace(" (p.p.)", "")
+                    rows.append((name_clean, float(val)))
 
-        if rows:
-            data_prel = pd.DataFrame(rows, columns=["Subramură", "Contribuție (p.p.)"])
+            if rows:
+                data_prel = pd.DataFrame(rows, columns=["Subramură", "Contribuție (p.p.)"])
 
-            # 🔹 eliminăm contribuțiile care sunt 0 după rotunjire la o zecimală
-            data_prel["Contribuție (p.p.)"] = data_prel["Contribuție (p.p.)"].astype(float)
-            data_prel = data_prel[data_prel["Contribuție (p.p.)"].round(1) != 0]
+                # 🔹 eliminăm contribuțiile care sunt 0 după rotunjire la o zecimală
+                data_prel["Contribuție (p.p.)"] = data_prel["Contribuție (p.p.)"].astype(float)
+                data_prel = data_prel[data_prel["Contribuție (p.p.)"].round(1) != 0]
 
-            if not data_prel.empty:
-                data_prel = data_prel.sort_values("Contribuție (p.p.)", ascending=False)
-                data_prel["Etichetă"] = data_prel["Contribuție (p.p.)"].map(
-                    lambda x: f"{x:.1f}"
-                )
+                if not data_prel.empty:
+                    data_prel = data_prel.sort_values("Contribuție (p.p.)", ascending=False)
+                    data_prel["Etichetă"] = data_prel["Contribuție (p.p.)"].map(
+                        lambda x: f"{x:.1f}"
+                    )
 
-                fig_prel = px.bar(
-                    data_prel,
-                    x="Contribuție (p.p.)",
-                    y="Subramură",
-                    orientation="h",
-                    text="Etichetă",
-                    template="simple_white",
-                )
-                fig_prel.update_traces(textposition="outside", textfont=dict(size=9))
-                fig_prel.add_vline(x=0, line_dash="dash", line_color="gray")
-                fig_prel.update_layout(
-                    margin=dict(l=20, r=20, t=40, b=40),
-                    xaxis_title="p.p.",
-                )
-                st.plotly_chart(fig_prel, use_container_width=True)
+                    fig_prel = px.bar(
+                        data_prel,
+                        x="Contribuție (p.p.)",
+                        y="Subramură",
+                        orientation="h",
+                        text="Etichetă",
+                        template="simple_white",
+                    )
+                    fig_prel.update_traces(textposition="outside", textfont=dict(size=9))
+                    fig_prel.add_vline(x=0, line_dash="dash", line_color="gray")
+                    fig_prel.update_layout(
+                        margin=dict(l=20, r=20, t=40, b=40),
+                        xaxis_title="p.p.",
+                    )
+                    st.plotly_chart(fig_prel, use_container_width=True)
+                else:
+                    st.info(
+                        "Pentru anul selectat, toate contribuțiile sunt 0 (după rotunjire la o zecimală)."
+                    )
             else:
-                st.info(
-                    "Pentru anul selectat, toate contribuțiile sunt 0 (după rotunjire la o zecimală)."
-                )
+                st.info("Nu s-au putut calcula contribuțiile pe subramuri pentru anul selectat.")
         else:
-            st.info("Nu s-au putut calcula contribuțiile pe subramuri pentru anul selectat.")
+            st.info("Nu există date pentru anul selectat în foaia 'Industrie_Prel'.")
     else:
-        st.info("Nu există date pentru anul selectat în foaia 'Industrie_Prel'.")
-else:
-    st.info("Nu s-au putut încărca datele din foaia 'Industrie_Prel'.")
+        st.info("Nu s-au putut încărca datele din foaia 'Industrie_Prel'.")
 
 # =====================================================
 # TAB: PRODUCȚIA AGRICOLĂ
 # =====================================================
+# =====================================================
+# TAB: PRODUCȚIA AGRICOLĂ
+# =====================================================
 with tab_agr:
+    # --- 1) Seria anuală în valori (mil. lei) ---
     st.markdown("#### Evoluția producției agricole (mil. lei)")
-    fig_agr = px.line(df_real, x=COL_YEAR, y=COL_AGR, markers=True, template="simple_white")
+    fig_agr = px.line(
+        df_real,
+        x=COL_YEAR,
+        y=COL_AGR,
+        markers=True,
+        template="simple_white",
+    )
+    fig_agr.update_layout(
+        xaxis_title="An",
+        yaxis_title="mil. lei",
+        margin=dict(l=40, r=20, t=40, b=60),
+    )
     st.plotly_chart(fig_agr, use_container_width=True)
+
+    st.markdown("---")
+
+    # --- 2) Indicii trimestriali ai volumului producției agricole (% ) ---
+    st.markdown(
+        "#### Dinamica indicilor trimestriali ai volumului producţiei agricole în gospodăriile de toate categoriile"
+    )
+
+    if df_agr_q is not None and not df_agr_q.empty:
+        cols_y = [
+            "Producția agricolă total, %",
+            "Producția vegetală",
+            "Producția animalieră",
+        ]
+  
+        fig_agr_q = px.line(
+            df_agr_q,
+            x="Perioadă",
+            y=cols_y,
+            markers=True,
+            template="simple_white",
+            labels={
+                "Perioadă": "",
+                "value": "%",
+                "variable": "",
+            },
+        )
+
+        # 🔹 Total = linie întreruptă, mai groasă
+        for trace in fig_agr_q.data:
+            if trace.name.strip().startswith("Producția agricolă total"):
+                trace.line["dash"] = "dash"
+                trace.line["width"] = 3
+            else:
+                trace.line["width"] = 3
+
+        # linie de referință la 100%
+        fig_agr_q.add_hline(y=100, line_dash="dash", line_color="gray")
+
+        fig_agr_q.update_layout(
+            yaxis_title="%",
+            xaxis_tickangle=-45,
+            margin=dict(l=40, r=20, t=40, b=80),
+            legend_title_text="",
+        )
+
+        st.plotly_chart(fig_agr_q, use_container_width=True)
+    else:
+        st.info("Nu s-au putut încărca indicii trimestriali ai producției agricole (foaia 'Agricultura').")
 
 # =====================================================
 # TAB: COMERȚ INTERN
@@ -833,6 +931,8 @@ with tab_trade:
 with tab_trans_tab:
     if df_trans is not None:
         st.markdown("#### Transport – mărfuri și pasageri")
+
+        # --- 1) Evoluții totale ---
         c1, c2 = st.columns(2)
         with c1:
             fig_marf = px.line(
@@ -841,8 +941,11 @@ with tab_trans_tab:
                 y="Total mărfuri transportate, mii tone",
                 markers=True,
                 template="simple_white",
+                title="Evoluția totală a mărfurilor transportate",
             )
+            fig_marf.update_layout(yaxis_title="mii tone", xaxis_title="")
             st.plotly_chart(fig_marf, use_container_width=True)
+
         with c2:
             fig_pas = px.line(
                 df_trans,
@@ -850,8 +953,120 @@ with tab_trans_tab:
                 y="Total, mii pasageri",
                 markers=True,
                 template="simple_white",
+                title="Evoluția totală a pasagerilor transportați",
             )
+            fig_pas.update_layout(yaxis_title="mii pasageri", xaxis_title="")
             st.plotly_chart(fig_pas, use_container_width=True)
+
+        st.markdown("---")
+
+        # --- 2) STRUCTURA TRANSPORTULUI ---
+        st.markdown("### Structura transportului pe tipuri de transport")
+
+        chart_type = st.radio(
+            "Alege tipul de diagramă:",
+            ["Tip I", "Tip II"],
+            key="chart_transport_type",
+            horizontal=True,
+        )
+
+        # --- definim coloanele ---
+        cols_goods = [c for c in df_trans.columns if "mărfuri" in c.lower() and "total" not in c.lower()]
+        cols_pass = [c for c in df_trans.columns if "pasager" in c.lower() and "total" not in c.lower()]
+
+        last_period = df_trans["Perioadă"].iloc[-1] if "Perioadă" in df_trans.columns else None
+
+        if chart_type == "Tip I":
+            # --- stacked pentru mărfuri ---
+            if cols_goods:
+                df_goods_long = df_trans.melt(
+                    id_vars=["Perioadă"],
+                    value_vars=cols_goods,
+                    var_name="Tip transport",
+                    value_name="Mărfuri (mii tone)",
+                )
+                fig_goods = px.bar(
+                    df_goods_long,
+                    x="Perioadă",
+                    y="Mărfuri (mii tone)",
+                    color="Tip transport",
+                    template="simple_white",
+                    title="Structura transportului de mărfuri (mii tone)",
+                    barmode="stack",
+                )
+                st.plotly_chart(fig_goods, use_container_width=True)
+            else:
+                st.info("Nu s-au găsit componente pentru mărfuri (în afară de total).")
+
+            # --- stacked pentru pasageri ---
+            if cols_pass:
+                df_pass_long = df_trans.melt(
+                    id_vars=["Perioadă"],
+                    value_vars=cols_pass,
+                    var_name="Tip transport",
+                    value_name="Pasageri (mii)",
+                )
+                fig_pass = px.bar(
+                    df_pass_long,
+                    x="Perioadă",
+                    y="Pasageri (mii)",
+                    color="Tip transport",
+                    template="simple_white",
+                    title="Structura transportului de pasageri (mii pasageri)",
+                    barmode="stack",
+                )
+                st.plotly_chart(fig_pass, use_container_width=True)
+            else:
+                st.info("Nu s-au găsit componente pentru pasageri (în afară de total).")
+
+        else:
+            # --- pie chart-uri una lângă alta ---
+            st.markdown(f"#### Structura pentru ultima perioadă: **{last_period}**")
+
+            c1, c2 = st.columns(2)
+
+            with c1:
+                if cols_goods:
+                    df_goods = df_trans.melt(
+                        id_vars=["Perioadă"],
+                        value_vars=cols_goods,
+                        var_name="Tip transport",
+                        value_name="Mărfuri (mii tone)",
+                    )
+                    df_goods = df_goods[df_goods["Perioadă"] == last_period]
+                    fig_goods_pie = px.pie(
+                        df_goods,
+                        values="Mărfuri (mii tone)",
+                        names="Tip transport",
+                        title="Mărfuri transportate",
+                        template="simple_white",
+                    )
+                    fig_goods_pie.update_traces(textinfo="percent+label", pull=[0.05]*len(df_goods))
+                    st.plotly_chart(fig_goods_pie, use_container_width=True)
+                else:
+                    st.info("Nu există componente pentru mărfuri (în afară de total).")
+
+            with c2:
+                if cols_pass:
+                    df_pass = df_trans.melt(
+                        id_vars=["Perioadă"],
+                        value_vars=cols_pass,
+                        var_name="Tip transport",
+                        value_name="Pasageri (mii)",
+                    )
+                    df_pass = df_pass[df_pass["Perioadă"] == last_period]
+                    fig_pass_pie = px.pie(
+                        df_pass,
+                        values="Pasageri (mii)",
+                        names="Tip transport",
+                        title="Pasageri transportați",
+                        template="simple_white",
+                    )
+                    fig_pass_pie.update_traces(textinfo="percent+label", pull=[0.05]*len(df_pass))
+                    st.plotly_chart(fig_pass_pie, use_container_width=True)
+                else:
+                    st.info("Nu există componente pentru pasageri (în afară de total).")
+
     else:
         st.info("Nu s-au putut încărca datele pentru transport.")
 
