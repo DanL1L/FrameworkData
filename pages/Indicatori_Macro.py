@@ -620,6 +620,9 @@ sheet_mapping = {
     "Ianuarie - Martie": "Import_NCM_III",
     "Ianuarie - Aprilie": "Import_NCM_IV",
     "Ianuarie - Mai": "Import_NCM_V",
+    "Ianuarie - Iunie": "Import_NCM_VI",
+    "Ianuarie - Iulie": "Import_NCM_VII",
+    "Ianuarie - August": "Import_NCM_VIII",
 }
 
 selected_sheet_name  = sheet_mapping.get(selected_month)
