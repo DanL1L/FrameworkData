@@ -10,7 +10,7 @@ def load_data(file_path=os.path.join(os.path.dirname(__file__), '../data/Data.xl
     
     # Verificăm foile disponibile în fișier
     sheets = pd.ExcelFile(file_path).sheet_names
-    required_sheets = ["Start_Data", "Exp_Reexp", "Influenta_Export", "Influenta_Import", "Exp_Lunar", "Exp_imp_Total","Import_NCM_I", "Import_NCM_II", "Import_NCM_III","Import_NCM_IV"]
+    required_sheets = ["Start_Data", "Exp_Reexp", "Influenta_Export", "Influenta_Import", "Exp_Lunar", "Exp_imp_Total","Import_NCM_I", "Import_NCM_II", "Import_NCM_III","Import_NCM_IV", "Import_NCM_V", "Import_NCM_VI", "Import_NCM_VII", "Import_NCM_VIII"]
 
     # Asigurăm că toate foile necesare există
     for sheet in required_sheets:
