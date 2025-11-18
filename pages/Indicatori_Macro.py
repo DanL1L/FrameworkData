@@ -30,7 +30,7 @@ st.set_page_config(page_title='Macroeconomic', layout='wide')
 #     <h1 style='text-align: center; color: #1a498d;'>Indicatorii macroeconomici</h1>
 #     <hr style='border: 1px solid #ddd;'>
 # """, unsafe_allow_html=True)
-# Creare layout cu logo și titlu pe același rând
+# Creare layout cu logo și titlu pe același rând    
 col1, col2 = st.columns([1, 4])  # Prima coloană mai mică pentru logo, a doua mai mare pentru text
 
 st.title("Sectorul Extern")
@@ -177,7 +177,7 @@ df_pib_growth = pd.DataFrame({
 # Inflație 
 df_inflatie = pd.DataFrame({
     'An': ['2021', '2022', '2023', '2024', '2025'],
-    'Rata Inflației (%)': [5.1, 28.7, 13.4, 4.7, 7.8]
+    'Rata Inflației (%)': [5.1, 28.7, 13.4, 4.7, 7.9]
 })
 
 selected_year_int = int(selected_year)
@@ -211,7 +211,7 @@ with col1:
 # Diagrama Inflației
 with col2:
     st.subheader("Rata medie a inflației")
-    st.metric(label="Inflația 2025", value="7.8%")
+    st.metric(label="Inflația 2025", value="7.9%")
     fig_inflatie = px.bar(df_inflatie, x="An", y="Rata Inflației (%)", title="")
     fig_inflatie.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
     st.plotly_chart(fig_inflatie, use_container_width=True)
@@ -623,6 +623,7 @@ sheet_mapping = {
     "Ianuarie - Iunie": "Import_NCM_VI",
     "Ianuarie - Iulie": "Import_NCM_VII",
     "Ianuarie - August": "Import_NCM_VIII",
+    "Ianuarie - Septembrie": "Import_NCM_IX",
 }
 
 selected_sheet_name  = sheet_mapping.get(selected_month)
