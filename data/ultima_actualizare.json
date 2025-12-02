@@ -1,0 +1,23 @@
+{
+  "data_actualizare": "Fără dată actualizare",
+  "indicatori": {
+    "Exporturi de mărfuri, %": {
+      "septembrie 2025 / august 2025": 103.8,
+      "septembrie 2025 / septembrie 2024": 123.1,
+      "ian.-sep. 2025 / ian.-sep. 2024": 100.3,
+      "2024 / 2023": 87.8
+    },
+    "Importuri de mărfuri, %": {
+      "septembrie 2025 / august 2025": 105.4,
+      "septembrie 2025 / septembrie 2024": 121.2,
+      "ian.-sep. 2025 / ian.-sep. 2024": 118.7,
+      "2024 / 2023": 104.5
+    },
+    "Deficitul balanţei comerciale, %": {
+      "septembrie 2025 / august 2025": 106.3,
+      "septembrie 2025 / septembrie 2024": 120.1,
+      "ian.-sep. 2025 / ian.-sep. 2024": 130.7,
+      "2024 / 2023": 119.1
+    }
+  }
+}

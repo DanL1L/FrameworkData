@@ -1,0 +1,21 @@
+{
+  "data_actualizare": "Fără dată actualizare",
+  "indicatori": {
+    "Trim. II 2025": {
+      "Forța de muncă, mii": 824.7,
+      "Rata de participare, %": 41.8,
+      "Populaţie ocupată, mii": 791.9,
+      "Rata de ocupare, %": 40.1,
+      "Şomeri BIM, mii": 32.8,
+      "Rata şomajului BIM, %": 4.0
+    },
+    "Trim. I 2025": {
+      "Tinerii NEET, 15-24 ani, mii": 32.7,
+      "Rata tinerilor NEET, 15-24 ani, %": 13.7,
+      "Tinerii NEET, 15-29 ani, mii": 79.3,
+      "Rata tinerilor NEET, 15-29 ani, %": 22.5,
+      "Tinerii NEET, 15-34 ani, mii": 148.4,
+      "Rata tinerilor NEET, 15-34 ani, %": 28.9
+    }
+  }
+}
