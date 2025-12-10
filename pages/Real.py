@@ -308,6 +308,47 @@ if prev_year in years_available and (ind_chg is not None or agr_chg is not None 
 if text_intro:
     st.markdown("\n\n".join(text_intro))
 
+
+# =====================================================
+# 1H. COMERȚ INTERN – TRIMESTRIAL
+# =====================================================
+df_trade_q = None
+try:
+    df_trade_q = pd.read_excel(file_path, sheet_name="Comert_Intern")
+
+    # conversii de tip
+    df_trade_q["An"] = pd.to_numeric(df_trade_q["An"], errors="coerce").astype("Int64")
+    df_trade_q["Trimestrul"] = df_trade_q["Trimestrul"].astype(str)
+
+    # ex: "2023 trim. I"
+    df_trade_q["Perioadă"] = (
+        df_trade_q["An"].astype(str)
+        + " "
+        + df_trade_q["Trimestrul"].str.replace("Trimestrul ", "trim. ")
+    )
+
+    # coloane nivel (mil. lei) și creștere reală (%)
+    cols_trade_level = [
+        "Total comert",
+        "Comert cu amanuntul",
+        "Comert cu ridicata",
+    ]
+    cols_trade_gr = [
+        "Creștere reala comert",
+        "Crestere reala comert cu amanuntul",
+        "Crestere reala comert cu ridicata",
+    ]
+
+    for col in cols_trade_level + cols_trade_gr:
+        if col in df_trade_q.columns:
+            df_trade_q[col] = pd.to_numeric(df_trade_q[col], errors="coerce")
+
+    df_trade_q = df_trade_q.dropna(subset=["An"]).sort_values(["An", "Trimestrul"])
+except Exception:
+    df_trade_q = None
+
+
+
 # =====================================================
 # TAB-URI (PIB primul)
 # =====================================================
@@ -845,9 +886,6 @@ with tab_ind_tab:
 # =====================================================
 # TAB: PRODUCȚIA AGRICOLĂ
 # =====================================================
-# =====================================================
-# TAB: PRODUCȚIA AGRICOLĂ
-# =====================================================
 with tab_agr:
     # --- 1) Seria anuală în valori (mil. lei) ---
     st.markdown("#### Evoluția producției agricole (mil. lei)")
@@ -918,12 +956,77 @@ with tab_agr:
 # TAB: COMERȚ INTERN
 # =====================================================
 with tab_trade:
-    st.markdown("#### Comerț intern (mil. lei)")
-    if COL_TRADE in df_real.columns:
-        fig_trade = px.line(df_real, x=COL_YEAR, y=COL_TRADE, markers=True, template="simple_white")
-        st.plotly_chart(fig_trade, use_container_width=True)
+    st.markdown("#### Comerț intern – Trimestre (mil. lei)")
+
+    if df_trade_q is not None and not df_trade_q.empty:
+        # --- 1) Niveluri: total, retail, en-gros ---
+        cols_level = [
+            c for c in [
+                "Total comert",
+                "Comert cu amanuntul",
+                "Comert cu ridicata",
+            ]
+            if c in df_trade_q.columns
+        ]
+
+        if cols_level:
+            fig_trade_level = px.line(
+                df_trade_q,
+                x="Perioadă",
+                y=cols_level,
+                markers=True,
+                template="simple_white",
+                labels={
+                    "Perioadă": "",
+                    "value": "mil. lei",
+                    "variable": "",
+                },
+            )
+            fig_trade_level.update_layout(
+                xaxis_tickangle=-45,
+                margin=dict(l=40, r=20, t=40, b=80),
+            )
+            st.plotly_chart(fig_trade_level, use_container_width=True)
+        else:
+            st.info("Nu s-au găsit coloanele cu nivelurile comerțului (Total / amănuntul / ridicata).")
+
+        st.markdown("---")
+        st.markdown("#### Creștere reală a comerțului intern (%)")
+
+        # --- 2) Creștere reală: total, retail, en-gros ---
+        cols_gr = [
+            c for c in [
+                "Creștere reala comert",
+                "Crestere reala comert cu amanuntul",
+                "Crestere reala comert cu ridicata",
+            ]
+            if c in df_trade_q.columns
+        ]
+
+        if cols_gr:
+            fig_trade_gr = px.line(
+                df_trade_q,
+                x="Perioadă",
+                y=cols_gr,
+                markers=True,
+                template="simple_white",
+                labels={
+                    "Perioadă": "",
+                    "value": "%",
+                    "variable": "",
+                },
+            )
+            # aici creșterile sunt deja în %, deci linie de referință la 0
+            fig_trade_gr.add_hline(y=0, line_dash="dash", line_color="gray")
+            fig_trade_gr.update_layout(
+                xaxis_tickangle=-45,
+                margin=dict(l=40, r=20, t=40, b=80),
+            )
+            st.plotly_chart(fig_trade_gr, use_container_width=True)
+        else:
+            st.info("Nu s-au găsit coloanele cu creșterile reale ale comerțului.")
     else:
-        st.info("Nu sunt date.")
+        st.info("Nu s-au putut încărca datele trimestriale pentru comerțul intern (foaia 'Comert_Intern').")
 
 # =====================================================
 # TAB: TRANSPORT
