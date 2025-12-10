@@ -243,7 +243,7 @@ else:
         if 'bal_yoy' in locals() and bal_yoy is not None:
             delta_text = f"{bal_yoy:+.1f}% vs {selected_month} {selected_year_int-1}"
         st.metric(
-            label=f"Sold Comercial {selected_month} {selected_year_int}",
+            label=f"{selected_month} {selected_year_int}",
             value=f"{bal_curr:,.1f} mil. $",
             delta=delta_text
         )
@@ -261,7 +261,7 @@ else:
         st.subheader("Dinamica exporturilor")
         if 'exp_yoy' in locals() and exp_yoy is not None:
             st.metric(
-                label=f"Exporturi {selected_month} {selected_year_int}",
+                label=f"{selected_month} {selected_year_int}",
                 value=f"{exp_curr:,.1f} mil. $",
                 delta=f"{exp_yoy:+.1f}%"
             )
@@ -282,7 +282,6 @@ else:
                 df_exp_cmp,
                 x="An",
                 y="Exporturi (mil. $)",
-                title="Export",
                 text_auto=True
             )
             fig_exp.update_layout(height=250, margin=dict(l=20, r=20, t=30, b=10))
@@ -293,7 +292,7 @@ else:
         st.subheader("Dinamica importurilor")
         if 'imp_yoy' in locals() and imp_yoy is not None:
             st.metric(
-                label=f"Importuri {selected_month} {selected_year_int}",
+                label=f"{selected_month} {selected_year_int}",
                 value=f"{imp_curr:,.1f} mil. $",
                 delta=f"{imp_yoy:+.1f}%"
             )
@@ -313,7 +312,6 @@ else:
                 df_imp_cmp,
                 x="An",
                 y="Importuri (mil. $)",
-                title="Import",
                 text_auto=True
             )
             fig_imp.update_layout(height=250, margin=dict(l=20, r=20, t=30, b=10))
@@ -359,7 +357,7 @@ tab_bunuri, tab_servicii = st.tabs(["Bunuri", "Servicii"])
 
 
 with tab_bunuri:
-
+    st.subheader("Comerț internațional cu bunuri (date BNS)")
 # Crearea layout-ului cu două coloane
     col1, col2 = st.columns(2)
 
@@ -1023,7 +1021,7 @@ with tab_bunuri:
 
 # ---------------- TAB 2: SERVICII ----------------
 with tab_servicii:
-    st.subheader("Comerț internațional cu servicii")
+    st.subheader("Comerț internațional cu servicii (date BNM)")
 
     # -------------------------------
     # 1. Încărcarea fișierului serviciilor
