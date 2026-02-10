@@ -1,10 +1,12 @@
 # app_bns_pxweb.py
 # ------------------------------------------------------------
-# Streamlit – Acces date BNS (PX-Web / Statbank)
+# Streamlit – Acces date BNS (PX-Web / Statbank) – MULTI-DOMENIU
 # + Fix 429 (Too Many Requests): cache + retry/backoff + Session
-# + Salvare automată (UPSERT) pentru Lunar: Exporturi/Importuri/Balanța comercială
-#   în fișierul DAta.xlsx -> foaia Exp_Lunar (An, Lună, Exporturi, Importuri, Sold)
-# + Debug: afișează calea exactă unde se scrie + previzualizare după salvare
+# + Navigator generic: selectezi dbid -> intri in foldere -> alegi tabel
+# + Salvare în fișiere Excel DIFERITE (pe sectoare) + UPSERT pe chei
+# + Salvare specială (formatată) pentru Extern/Lunar: Exp_Lunar (Export/Import/Sold)
+# + Routing pe foi: dacă tabelul este "Agricultura" => Real.xlsx / foaia "Agricultura"
+# + (Opțional) avertizare dacă sectorul inferred nu corespunde destinației
 # ------------------------------------------------------------
 
 import time
@@ -26,16 +28,74 @@ st.set_page_config(layout="wide")
 st.title("Datele oficiale ale BNS")
 
 # =========================
-# EXCEL TARGET (Exp_Lunar)
+# PX-WEB ROOT + DOMAINS
 # =========================
-EXCEL_DATA_FILE = Path("data/Data.xlsx")  # ajustează dacă e în alt folder (ex: Path("data/DAta.xlsx"))
-EXCEL_SHEET_EXP = "Exp_Lunar"
+API_ROOT = "https://statbank.statistica.md/PxWeb/api/v1/ro"
+
+DOMAINS = [
+    {"dbid": "10 Mediul inconjurator", "text": "Mediul inconjurator"},
+    {"dbid": "20 Populatia si procesele demografice", "text": "Populatia si procesele demografice"},
+    {"dbid": "30 Statistica sociala", "text": "Statistica sociala"},
+    {"dbid": "40 Statistica economica", "text": "Statistica economica"},
+    {"dbid": "50 Statistica gender", "text": "Statistica gender"},
+    {"dbid": "60 Statistica regionala", "text": "Statistica regionala"},
+]
+
+# =========================
+# DESTINAȚII EXCEL (pe sectoare)
+# =========================
+SECTOR_EXPORTS = {
+    "EXT_LUNAR": {"file": Path("data/Data.xlsx"), "sheet": "Exp_Lunar"},   # format special (Export/Import/Sold)
+    "SOCIAL":    {"file": Path("data/Social.xlsx"), "sheet": "Date"},
+    "MONETAR":   {"file": Path("data/Monetar.xlsx"), "sheet": "Date"},
+    "PUBLIC":    {"file": Path("data/Public.xlsx"), "sheet": "Date"},
+    "REAL":      {"file": Path("data/Real.xlsx"), "sheet": "Date"},       # default (se va suprascrie de ROUTING dacă e cazul)
+    "MEDIU":     {"file": Path("data/Mediu.xlsx"), "sheet": "Date"},
+    "POP":       {"file": Path("data/Populatie.xlsx"), "sheet": "Date"},
+    "REGIONAL":  {"file": Path("data/Regional.xlsx"), "sheet": "Date"},
+    "GENDER":    {"file": Path("data/Gender.xlsx"), "sheet": "Date"},
+}
+
+SAVE_CHOICES = [
+    "Nu salva datele în fișiere Excel",
+    "Extern",
+    "Social",
+    "Monetar",
+    "Public",
+    "Real",
+    "Mediu",
+    "Populație",
+    "Regional",
+    "Gender",
+]
+
+SAVE_MAP = {
+    "Extern": "EXT_LUNAR",
+    "Social": "SOCIAL",
+    "Monetar": "MONETAR",
+    "Public": "PUBLIC",
+    "Real": "REAL",
+    "Mediu": "MEDIU",
+    "Populație": "POP",
+    "Regional": "REGIONAL",
+    "Gender": "GENDER",
+}
+
+# =========================
+# ROUTING FOI SPECIALE (după cuvinte cheie din tabel)
+# Cheia: un pattern (normalizat). Valoarea: (sector_code, sheet_name)
+# Exemplu cerut: Agricultura -> REAL / "Agricultura"
+# Poți extinde ușor cu "Industrie", "PIB", "Transport" etc.
+# =========================
+SHEET_ROUTING_RULES = [
+    # (must_contain_keywords, sector_code, sheet_name)
+    (["agric"], "REAL", "Agricultura"),
+]
 
 # =========================
 # HTTP SESSION + RETRY
 # =========================
 SESSION = requests.Session()
-
 DEFAULT_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Streamlit PX-Web client)",
     "Accept": "application/json",
@@ -86,20 +146,11 @@ def post_with_retry(url: str, payload: dict, retries: int = 6, timeout: int = 60
     raise RuntimeError("Eroare rețea: nu s-a putut efectua POST după retry-uri.")
 
 # =========================
-# PX-WEB DIRECTORY ENDPOINTS
-# =========================
-url_map = {
-    "Lunar": "https://statbank.statistica.md/PxWeb/api/v1/ro/40%20Statistica%20economica/21%20EXT/EXT010/serii%20lunare",
-    "Trimestrial": "https://statbank.statistica.md/PxWeb/api/v1/ro/40%20Statistica%20economica/21%20EXT/EXT010/serii%20trimestriale",
-    "Anual": "https://statbank.statistica.md/PxWeb/api/v1/ro/40%20Statistica%20economica/21%20EXT/EXT010/serii%20anuale",
-}
-
-# =========================
 # CACHED CALLS
 # =========================
 @st.cache_data(ttl=3600, show_spinner=False)
 def list_directory(url_base_dir: str) -> list:
-    """Listează tabelele dintr-un director PX-Web. Cache 1 oră."""
+    """Listează item-urile dintr-un director PX-Web. Cache 1 oră."""
     r = get_with_retry(url_base_dir)
     if r.status_code != 200:
         raise RuntimeError(f"Directory error {r.status_code}: {r.text[:300]}")
@@ -116,16 +167,8 @@ def get_metadata(url_table: str) -> dict:
             return {}
     return {}
 
-def detect_time_column(cols):
-    """Detectează coloana timp (an/lună/trimestru/perioadă) din dataframe."""
-    for col in cols:
-        c = str(col).lower()
-        if any(x in c for x in ["an", "ani", "luna", "luni", "lun", "trimestru", "perioad", "quarter", "month", "year", "time"]):
-            return col
-    return None
-
 # =========================
-# TEXT NORMALIZATION (diacritice safe)
+# HELPERS
 # =========================
 def _norm(s: str) -> str:
     """lower + remove diacritics + trim"""
@@ -136,60 +179,172 @@ def _norm(s: str) -> str:
     s = "".join(ch for ch in s if not unicodedata.combining(ch))
     return s
 
+def detect_time_column(cols):
+    """Detectează coloana timp (an/lună/trimestru/perioadă) din dataframe."""
+    for col in cols:
+        c = str(col).lower()
+        if any(x in c for x in ["an", "ani", "luna", "luni", "lun", "trimestru", "perioad", "quarter", "month", "year", "time"]):
+            return col
+    return None
+
+def pick_keys_for_upsert(df: pd.DataFrame, max_keys: int = 2) -> list[str]:
+    """
+    Alege chei rezonabile pentru upsert:
+      1) An + Lună, dacă există
+      2) An + Trimestru/Perioadă, dacă există
+      3) Regiune + An, dacă există
+      4) Altfel: primele 1-2 coloane diferite de 'Valoare'
+    """
+    cols = list(df.columns)
+    if not cols:
+        return []
+
+    def find_by_norm(names):
+        for c in cols:
+            if _norm(c) in names:
+                return c
+        return None
+
+    col_year = find_by_norm({"an", "ani", "year"})
+    col_month = find_by_norm({"luna", "luni", "month"})
+    col_q = None
+    for c in cols:
+        cn = _norm(c)
+        if "trimestru" in cn or "quarter" in cn or "trim" == cn:
+            col_q = c
+            break
+    col_region = None
+    for c in cols:
+        cn = _norm(c)
+        if any(x in cn for x in ["regi", "raion", "municip", "localit", "zona", "region", "district"]):
+            col_region = c
+            break
+
+    if col_year and col_month:
+        return [col_year, col_month][:max_keys]
+    if col_year and col_q:
+        return [col_year, col_q][:max_keys]
+    if col_region and col_year:
+        return [col_region, col_year][:max_keys]
+    if col_year:
+        return [col_year][:max_keys]
+
+    fallback = [c for c in cols if c != "Valoare"]
+    return fallback[:max_keys] if fallback else []
+
+def resolve_destination(save_code: str, table_name: str, table_url: str) -> tuple[Path, str, str]:
+    """
+    Returnează (excel_file, sheet_name, reason)
+    - pornește de la destinația selectată (save_code)
+    - apoi aplică reguli de routing pe foi (ex: Agricultura -> REAL/Agricultura)
+    """
+    base = SECTOR_EXPORTS[save_code]
+    excel_file = base["file"]
+    sheet_name = base["sheet"]
+    reason = f"Destinație standard: {save_code}/{sheet_name}"
+
+    context = _norm(f"{table_name or ''} {table_url or ''}")
+
+    for keywords, sector_code, target_sheet in SHEET_ROUTING_RULES:
+        if all(k in context for k in keywords):
+            routed = SECTOR_EXPORTS[sector_code]
+            excel_file = routed["file"]
+            sheet_name = target_sheet
+            reason = f"Routing activ: {keywords} => {sector_code}/{target_sheet}"
+            break
+
+    return excel_file, sheet_name, reason
+
 # =========================
-# SALVARE Exp_Lunar -> DAta.xlsx (UPSERT)
+# GENERIC EXCEL UPSERT
+# =========================
+def excel_upsert(df: pd.DataFrame, excel_path: Path, sheet_name: str, keys: list[str]):
+    if df.empty:
+        st.warning("Nu am date de salvat (df gol).")
+        return
+
+    excel_path.parent.mkdir(parents=True, exist_ok=True)
+    st.info(f"Scriere în: {excel_path.resolve()} | foaia: {sheet_name} | chei: {keys}")
+
+    for k in keys:
+        if k not in df.columns:
+            st.error(f"Lipsește cheia '{k}' din date.")
+            return
+
+    if excel_path.exists():
+        try:
+            existing = pd.read_excel(excel_path, sheet_name=sheet_name)
+        except Exception:
+            existing = pd.DataFrame()
+    else:
+        existing = pd.DataFrame()
+
+    if existing.empty:
+        combined = df.copy()
+    else:
+        for k in keys:
+            if k not in existing.columns:
+                existing[k] = pd.NA
+
+        new_keys = set(df[keys].astype(str).agg("|".join, axis=1))
+        keep_mask = ~existing[keys].astype(str).agg("|".join, axis=1).isin(new_keys)
+        existing_kept = existing.loc[keep_mask].copy()
+        combined = pd.concat([existing_kept, df], ignore_index=True)
+
+    try:
+        if excel_path.exists():
+            with pd.ExcelWriter(excel_path, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+                combined.to_excel(writer, sheet_name=sheet_name, index=False)
+        else:
+            with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
+                combined.to_excel(writer, sheet_name=sheet_name, index=False)
+    except PermissionError:
+        st.error("Nu pot scrie în Excel: fișierul este deschis/blocat. Închide fișierul și încearcă din nou.")
+        return
+
+    st.success(f"Salvat: {excel_path.name} → '{sheet_name}' (înscris pe {keys}).")
+    st.caption("Previzualizare (ultimele 50 rânduri):")
+    st.dataframe(combined.tail(50), use_container_width=True)
+
+# =========================
+# SALVARE SPECIALĂ: Exp_Lunar (Export/Import/Sold)
 # =========================
 def save_exp_lunar_to_excel(df_px: pd.DataFrame, excel_path: Path, sheet_name: str = "Exp_Lunar"):
-    """
-    Așteaptă df_px cu rânduri tip:
-      Indicatori | Grupe de tari | Ani | Unitatea de masura | Luni | Valoare
-    și salvează în Excel în format:
-      An | Lună | Exporturi (mil. $) | Importuri (mil. $) | Sold Comercial (mil. $)
-    cu upsert după (An, Lună).
-    """
     if df_px.empty:
         st.warning("Nu am date de salvat (df gol).")
         return
 
-    # Debug path
-    st.info(f"Scriere în fișier: {excel_path.resolve()} | foaia: {sheet_name}")
+    st.info(f"Scriere Exp_Lunar în: {excel_path.resolve()} | foaia: {sheet_name}")
 
-    # Detect columns
     col_ind = next((c for c in df_px.columns if "indicator" in _norm(c)), None)
     col_year = next((c for c in df_px.columns if _norm(c) in ["ani", "an", "year"]), None)
     col_month = next((c for c in df_px.columns if _norm(c) in ["luni", "luna", "month"]), None)
 
     if not col_ind or not col_year or not col_month or "Valoare" not in df_px.columns:
-        st.error(
-            "Nu pot identifica coloanele necesare.\n"
-            f"Am găsit: Indicator={col_ind}, An={col_year}, Lună={col_month}, Valoare={'Valoare' in df_px.columns}"
+        st.warning(
+            "Exp_Lunar: nu am găsit coloanele necesare (Indicator/An/Lună/Valoare). "
+            "Dacă tabelul nu e cel de comerț lunar, e normal."
         )
         return
 
     dfw = df_px.copy()
 
-    # Filter Total (if exists)
     col_group = next((c for c in dfw.columns if "grupe" in _norm(c) and "tari" in _norm(c)), None)
     if col_group:
         dfw = dfw[dfw[col_group].astype(str).apply(_norm).str.contains("total", na=False)]
 
-    # Normalize indicator names
     dfw["_ind_norm"] = dfw[col_ind].astype(str).apply(_norm)
 
-    # Keep wanted indicators (robust)
     wanted = {"exporturi", "importuri", "balanta comerciala"}
     dfw = dfw[dfw["_ind_norm"].isin(wanted)].copy()
 
     if dfw.empty:
-        st.warning("În selecția curentă nu există rânduri pentru Exporturi/Importuri/Balanța comercială (după filtrare).")
-        st.write("Indicatori disponibili (normalizați):", sorted(set(df_px[col_ind].astype(str).apply(_norm))))
+        st.warning("Exp_Lunar: nu există Exporturi/Importuri/Balanța comercială în selecția curentă.")
         return
 
-    # numeric year
     dfw[col_year] = pd.to_numeric(dfw[col_year], errors="coerce")
     dfw = dfw.dropna(subset=[col_year, col_month])
 
-    # pivot (An, Lună) -> indicatori
     pivot = (
         dfw.pivot_table(index=[col_year, col_month], columns="_ind_norm", values="Valoare", aggfunc="sum")
         .reset_index()
@@ -213,10 +368,10 @@ def save_exp_lunar_to_excel(df_px: pd.DataFrame, excel_path: Path, sheet_name: s
     pivot = pivot.dropna(subset=["An", "Lună"])
 
     if pivot.empty:
-        st.warning("Pivotul a ieșit gol (nu am An/Lună valide).")
+        st.warning("Exp_Lunar: pivot gol (nu am An/Lună valide).")
         return
 
-    # Read existing
+    excel_path.parent.mkdir(parents=True, exist_ok=True)
     if excel_path.exists():
         try:
             existing = pd.read_excel(excel_path, sheet_name=sheet_name)
@@ -225,7 +380,6 @@ def save_exp_lunar_to_excel(df_px: pd.DataFrame, excel_path: Path, sheet_name: s
     else:
         existing = pd.DataFrame(columns=needed)
 
-    # Normalize existing
     if "An" in existing.columns:
         existing["An"] = pd.to_numeric(existing["An"], errors="coerce").astype("Int64")
     else:
@@ -233,7 +387,6 @@ def save_exp_lunar_to_excel(df_px: pd.DataFrame, excel_path: Path, sheet_name: s
     if "Lună" not in existing.columns:
         existing["Lună"] = pd.NA
 
-    # Upsert by (An, Lună)
     key_new = set((int(a), str(l)) for a, l in zip(pivot["An"], pivot["Lună"]))
 
     if not existing.empty:
@@ -245,7 +398,6 @@ def save_exp_lunar_to_excel(df_px: pd.DataFrame, excel_path: Path, sheet_name: s
 
     combined = pd.concat([existing, pivot], ignore_index=True)
 
-    # Optional: calendar sorting for Romanian months
     month_order = {
         "ianuarie": 1, "februarie": 2, "martie": 3, "aprilie": 4, "mai": 5, "iunie": 6,
         "iulie": 7, "august": 8, "septembrie": 9, "octombrie": 10, "noiembrie": 11, "decembrie": 12
@@ -253,7 +405,6 @@ def save_exp_lunar_to_excel(df_px: pd.DataFrame, excel_path: Path, sheet_name: s
     combined["_m"] = combined["Lună"].astype(str).apply(_norm).map(month_order)
     combined = combined.sort_values(["An", "_m", "Lună"], kind="stable").drop(columns=["_m"])
 
-    # Write excel (file must be closed)
     try:
         if excel_path.exists():
             with pd.ExcelWriter(excel_path, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
@@ -262,64 +413,140 @@ def save_exp_lunar_to_excel(df_px: pd.DataFrame, excel_path: Path, sheet_name: s
             with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
                 combined.to_excel(writer, sheet_name=sheet_name, index=False)
     except PermissionError:
-        st.error(" Nu pot scrie în Excel: fișierul este deschis/blocat. Închide Data.xlsx și încearcă din nou.")
+        st.error("Exp_Lunar: nu pot scrie în Excel: fișierul este deschis/blocat.")
         return
 
-    st.success(f"Salvat în {excel_path.name} → foaia '{sheet_name}' (upsert după An+Lună).")
-    st.subheader("Previzualizare foaia Exp_Lunar (după salvare)")
-    st.dataframe(combined, use_container_width=True)
+    st.success(f"Exp_Lunar salvat: {excel_path.name} → '{sheet_name}' (upsert An+Lună).")
+    st.caption("Previzualizare Exp_Lunar (ultimele 50 rânduri):")
+    st.dataframe(combined.tail(50), use_container_width=True)
 
 # =========================
-# SIDEBAR – SELECT PERIOD/FREQUENCY
+# SIDEBAR – SELECT DOMAIN
 # =========================
-st.sidebar.header("Selectare perioadă")
-frecventa = st.sidebar.selectbox("Frecvența datelor", ["Lunar", "Trimestrial", "Anual"])
-url_base_dir = url_map[frecventa]
+st.sidebar.header("1) Domeniul")
+domain_label = st.sidebar.selectbox("Alege domeniul", [d["text"] for d in DOMAINS])
+domain_dbid = next(d["dbid"] for d in DOMAINS if d["text"] == domain_label)
+domain_url = f"{API_ROOT}/{domain_dbid}"
 
-# Load list one time (avoid 429)
-if "files_cache" not in st.session_state:
-    st.session_state["files_cache"] = None
-if "last_dir" not in st.session_state:
-    st.session_state["last_dir"] = None
+# =========================
+# SIDEBAR – NAVIGATOR
+# =========================
+st.sidebar.header("2) Navigare foldere")
+st.sidebar.caption("Navighează până alegi un tabel (metadata cu variabile).")
 
-st.sidebar.caption("Recomandat: încarcă lista o singură dată (evită 429).")
+if "nav_path" not in st.session_state:
+    st.session_state["nav_path"] = []
+if "nav_items" not in st.session_state:
+    st.session_state["nav_items"] = None
+if "nav_domain" not in st.session_state:
+    st.session_state["nav_domain"] = None
+if "selected_table_url" not in st.session_state:
+    st.session_state["selected_table_url"] = None
+if "selected_table_name" not in st.session_state:
+    st.session_state["selected_table_name"] = None
 
-if st.sidebar.button("Încarcă lista de fișiere"):
-    try:
-        st.session_state["files_cache"] = list_directory(url_base_dir)
-        st.session_state["last_dir"] = url_base_dir
-        st.sidebar.success("Lista de fișiere a fost încărcată.")
-    except Exception as e:
-        st.sidebar.error(f"Eroare la accesarea directorului: {e}")
+if st.session_state["nav_domain"] != domain_dbid:
+    st.session_state["nav_domain"] = domain_dbid
+    st.session_state["nav_path"] = []
+    st.session_state["nav_items"] = None
+    st.session_state["selected_table_url"] = None
+    st.session_state["selected_table_name"] = None
 
-if st.session_state["last_dir"] != url_base_dir:
-    st.session_state["files_cache"] = None
+def build_current_url() -> str:
+    if not st.session_state["nav_path"]:
+        return domain_url
+    return domain_url + "/" + "/".join(st.session_state["nav_path"])
 
-files = st.session_state["files_cache"]
-if not files:
-    st.info("Selectează frecvența și apasă «Încarcă lista de fișiere».")
+current_dir_url = build_current_url()
+
+colA, colB = st.sidebar.columns([1, 1])
+with colA:
+    if st.button("Încarcă folderul"):
+        try:
+            st.session_state["nav_items"] = list_directory(current_dir_url)
+            st.sidebar.success("Folder încărcat.")
+        except Exception as e:
+            st.sidebar.error(f"Eroare director: {e}")
+with colB:
+    if st.button("Înapoi"):
+        if st.session_state["nav_path"]:
+            st.session_state["nav_path"] = st.session_state["nav_path"][:-1]
+            st.session_state["nav_items"] = None
+            st.session_state["selected_table_url"] = None
+            st.session_state["selected_table_name"] = None
+            st.rerun()
+
+st.sidebar.markdown("**Cale curentă:**")
+st.sidebar.code("/".join([domain_dbid] + st.session_state["nav_path"]) or domain_dbid)
+
+items = st.session_state["nav_items"]
+if not items:
+    st.info("Alege domeniul, apoi apasă «Încarcă folderul».")
     st.stop()
 
-# =========================
-# SELECT TABLE
-# =========================
-fisier_optiuni = {f["text"]: f["id"] for f in files if "text" in f and "id" in f}
-fisier_selectat = st.sidebar.selectbox("Selectează fișierul", list(fisier_optiuni.keys()))
-fisier_id = fisier_optiuni[fisier_selectat]
-url_base = f"{url_base_dir}/{fisier_id}"
+options = []
+id_by_label = {}
+for it in items:
+    if "id" in it and "text" in it:
+        label = f'{it["text"]}  [{it["id"]}]'
+        options.append(label)
+        id_by_label[label] = it["id"]
+
+selected_label = st.sidebar.selectbox("Selectează item", options)
+selected_id = id_by_label[selected_label]
+candidate_url = current_dir_url.rstrip("/") + "/" + selected_id
+
+meta_candidate = get_metadata(candidate_url)
+is_table = bool(meta_candidate and isinstance(meta_candidate, dict) and "variables" in meta_candidate)
+
+nav_cols = st.sidebar.columns([1, 1])
+with nav_cols[0]:
+    if st.button("Deschide"):
+        if is_table:
+            st.session_state["selected_table_url"] = candidate_url
+            st.session_state["selected_table_name"] = selected_label
+            st.sidebar.success("Tabel selectat.")
+        else:
+            st.session_state["nav_path"].append(selected_id)
+            st.session_state["nav_items"] = None
+            st.session_state["selected_table_url"] = None
+            st.session_state["selected_table_name"] = None
+            st.rerun()
+
+with nav_cols[1]:
+    if st.button("Reset navigare"):
+        st.session_state["nav_path"] = []
+        st.session_state["nav_items"] = None
+        st.session_state["selected_table_url"] = None
+        st.session_state["selected_table_name"] = None
+        st.rerun()
+
+table_url = st.session_state.get("selected_table_url")
+table_name = st.session_state.get("selected_table_name")
+
+st.sidebar.header("3) Salvare")
+save_to = st.sidebar.selectbox("Destinație Excel", SAVE_CHOICES)
+
+if not table_url:
+    st.warning("Navighează până alegi un **tabel** și apasă «Deschide».")
+    st.stop()
+
+st.markdown("### Tabel selectat")
+st.write(table_name)
+st.caption(table_url)
 
 # =========================
 # METADATA & FILTERS
 # =========================
-metadata = get_metadata(url_base)
+metadata = get_metadata(table_url)
 if not metadata or "variables" not in metadata:
-    st.warning("Nu s-au putut încărca variabilele pentru acest fișier.")
+    st.warning("Nu s-au putut încărca variabilele pentru acest tabel.")
     st.stop()
 
-st.sidebar.header("Filtre disponibile")
+st.sidebar.header("4) Filtre (dimensiuni)")
 
-dimensiuni = {}   # {nume_dim: {value_code: value_label}}
-coduri_dim = {}   # {nume_dim: code_dim}
+dimensiuni = {}
+coduri_dim = {}
 
 for dim in metadata["variables"]:
     nume = dim.get("text", "")
@@ -335,20 +562,13 @@ selectii = {}
 for nume_dim, optiuni in dimensiuni.items():
     chei = list(optiuni.keys())
     etichete = list(optiuni.values())
-
-    # default: prima opțiune (ca să nu trimiți payload mare)
     default_labels = etichete[:1] if len(etichete) > 0 else []
     selectie_labels = st.sidebar.multiselect(nume_dim, etichete, default=default_labels)
-
     valori_selectate = [chei[etichete.index(lbl)] for lbl in selectie_labels if lbl in etichete]
     if valori_selectate:
         selectii[nume_dim] = valori_selectate
 
-# =========================
-# BUILD PAYLOAD
-# =========================
 payload = {"query": [], "response": {"format": "json-stat2"}}
-
 for nume_dim, cod in coduri_dim.items():
     values = selectii.get(nume_dim, list(dimensiuni[nume_dim].keys())[:1])
     payload["query"].append({
@@ -360,7 +580,7 @@ for nume_dim, cod in coduri_dim.items():
 # MAIN ACTION
 # =========================
 if st.sidebar.button("Afișează datele"):
-    r = post_with_retry(url_base, payload)
+    r = post_with_retry(table_url, payload)
 
     if r.status_code != 200:
         st.error(f"Eroare API (POST): {r.status_code} | {r.text[:300]}")
@@ -368,13 +588,11 @@ if st.sidebar.button("Afișează datele"):
 
     try:
         data = r.json()
-
         if "value" not in data or "dimension" not in data:
             st.error("Răspuns API invalid: lipsesc câmpuri necesare ('value'/'dimension').")
             st.stop()
 
         valori = data["value"]
-
         dim_order = [d for d in data["dimension"].keys() if d not in ["id", "size"]]
 
         categorii = []
@@ -387,74 +605,8 @@ if st.sidebar.button("Afișează datele"):
         df = pd.DataFrame(valori, index=index, columns=["Valoare"]).reset_index()
 
         st.success("Date preluate cu succes!")
-
-        fisier_info = next((f for f in files if f.get("id") == fisier_id), None)
-        if fisier_info:
-            denumire = fisier_info.get("text", fisier_id)
-            raw_date = (fisier_info.get("updated", "") or "")[:10]
-
-            status = "❓"
-            ultima_data = "n/a"
-            try:
-                parsed_date = datetime.strptime(raw_date, "%Y-%m-%d")
-                ultima_data = parsed_date.strftime("%d.%m.%Y")
-                zile_diferenta = (datetime.today() - parsed_date).days
-                status = "🟢" if zile_diferenta <= 30 else "🔴"
-            except Exception:
-                pass
-
-            st.markdown(f"### {denumire}")
-            st.markdown(f"**Ultima actualizare:** `{ultima_data}`  {status}")
-
         st.dataframe(df, use_container_width=True)
 
-        # =========================
-        # SALVARE AUTOMATĂ (Lunar): Exporturi/Importuri/Balanța comercială
-        # =========================
-        if frecventa == "Lunar":
-            # funcția filtrează ea, deci o chemăm direct
-            save_exp_lunar_to_excel(df, EXCEL_DATA_FILE, EXCEL_SHEET_EXP)
-
-        # =========================
-        # ANALIZĂ ANUALĂ (dacă e cazul)
-        # =========================
-        if frecventa == "Anual":
-            st.subheader("Evoluția anuală și ratele de creștere (%)")
-
-            col_ani = next((c for c in df.columns if _norm(c) in ["ani", "an", "year"]), None)
-            col_indicator = next((c for c in df.columns if "indicator" in _norm(c)), None)
-
-            if col_ani and col_indicator:
-                df_total = df.groupby([col_indicator, col_ani])["Valoare"].sum().reset_index()
-                df_total.sort_values([col_indicator, col_ani], inplace=True)
-
-                df_total["Valoare_lag"] = df_total.groupby(col_indicator)["Valoare"].shift(1)
-                df_total["Rată (%)"] = ((df_total["Valoare"] - df_total["Valoare_lag"]) / df_total["Valoare_lag"] * 100).round(2)
-
-                df_val = df_total.pivot(index=col_indicator, columns=col_ani, values="Valoare").round(2)
-                df_rate = df_total.pivot(index=col_indicator, columns=col_ani, values="Rată (%)").round(2)
-
-                df_combined = pd.concat({"Valoare": df_val, "Rată (%)": df_rate}, axis=0).sort_index()
-                st.dataframe(df_combined, use_container_width=True)
-            else:
-                st.info("Nu am putut identifica automat coloanele pentru 'Indicator' și 'Ani' în acest tabel.")
-
-            col_grupe = next((c for c in df.columns if "grupe" in _norm(c) and "tari" in _norm(c)), None)
-            if col_grupe:
-                try:
-                    df_pie = df.groupby(col_grupe)["Valoare"].sum().reset_index()
-                    if len(df_pie) == 1 and _norm(df_pie[col_grupe].iloc[0]) == "total":
-                        st.info("Diagrama circulară nu este afișată deoarece datele includ doar totalul.")
-                    else:
-                        st.markdown("#### Ponderi pe grupe de țări (cumulativ):")
-                        fig_pie = px.pie(df_pie, names=col_grupe, values="Valoare", title="Ponderea pe grupe de țări")
-                        st.plotly_chart(fig_pie, use_container_width=True)
-                except Exception as e:
-                    st.warning(f"Nu s-a putut genera diagrama circulară: {e}")
-
-        # =========================
-        # GRAFIC (linie)
-        # =========================
         col_timp = detect_time_column(df.columns)
         if col_timp:
             color_col = next((c for c in df.columns if c not in [col_timp, "Valoare"]), None)
@@ -465,16 +617,38 @@ if st.sidebar.button("Afișează datele"):
             st.plotly_chart(fig, use_container_width=True)
 
         # =========================
-        # EXPORT EXCEL (download)
+        # SALVARE: dacă e AGRICULTURA => Real.xlsx / foaia "Agricultura"
+        # altfel: salvează în destinația selectată
+        # =========================
+        if save_to != "Nu salva":
+            save_code = SAVE_MAP[save_to]
+
+            # routing pe foi (Agricultura etc.)
+            excel_file, sheet_name, reason = resolve_destination(save_code, table_name, table_url)
+            st.caption(f"Destinație finală: **{excel_file.name} / {sheet_name}** | {reason}")
+
+            # dacă user a ales Extern, păstrăm salvarea specială (doar pe foaia Exp_Lunar)
+            if save_code == "EXT_LUNAR":
+                dest = SECTOR_EXPORTS["EXT_LUNAR"]
+                save_exp_lunar_to_excel(df, dest["file"], dest["sheet"])
+            else:
+                keys = pick_keys_for_upsert(df, max_keys=2)
+                if not keys:
+                    st.warning("Nu am putut detecta chei pentru upsert. Nu salvez.")
+                else:
+                    excel_upsert(df, excel_file, sheet_name, keys=keys)
+
+        # =========================
+        # EXPORT EXCEL (download) – pentru sesiunea curentă
         # =========================
         output = BytesIO()
         with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
             df.to_excel(writer, index=False, sheet_name="Date")
 
         st.download_button(
-            "Descarcă Excel",
+            "Descarcă Excel (datele curente)",
             output.getvalue(),
-            file_name=f"{fisier_id}.xlsx",
+            file_name="pxweb_export.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
