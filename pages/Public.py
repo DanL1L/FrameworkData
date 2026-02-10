@@ -24,11 +24,11 @@ st.markdown("""
     }
     .js-plotly-plot text,
     .js-plotly-plot tspan {
-    text-shadow: none !important;
-    fill: #111111 !important;      /* culoare text SVG */
-    color: #111111 !important;     /* fallback */
-    font-weight: 600 !important;   /* puțin mai bold */
-}
+        text-shadow: none !important;
+        fill: #111111 !important;      /* culoare text SVG */
+        color: #111111 !important;     /* fallback */
+        font-weight: 600 !important;   /* puțin mai bold */
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -46,8 +46,10 @@ file_path = os.path.join("data", "Test_Data_Venituri_Cheltuieli.xlsx")
 try:
     xls = pd.ExcelFile(file_path)
 except FileNotFoundError:
-    st.error(f"Fișierul nu a fost găsit: `{file_path}`.\n"
-             f"Verifică să fie în folderul `data/` sau actualizează calea în cod.")
+    st.error(
+        f"Fișierul nu a fost găsit: `{file_path}`.\n"
+        f"Verifică să fie în folderul `data/` sau actualizează calea în cod."
+    )
     st.stop()
 
 df_venituri = pd.read_excel(xls, sheet_name="Venituri")
@@ -131,33 +133,68 @@ total_exp = float(row_c["Total cheltuieli conf. raportului Min Fin"])
 deficit = round(total_exp - total_rev, 1)
 
 # =====================================================
-# 4. STRUCTURA PENTRU SANKEY
+# 4. STRUCTURA PENTRU SANKEY (cu culori separate)
 # =====================================================
 nodes = (
     list(revenues.keys())
-    + ["Total venituri", "Deficit", "Total cheltuieli"]
+    + ["Total venituri", "Deficit", ""]   # ← text ascuns pentru Total cheltuieli
     + list(expenses.keys())
 )
 idx = {name: i for i, name in enumerate(nodes)}
 
-sources, targets, values = [], [], []
+# Culori (noduri + fluxuri)
+COLOR_REV_NODE = "#2E8B57"      # venituri (verde)
+COLOR_EXP_NODE = "#C0392B"      # cheltuieli (roșu)
+COLOR_DEF_NODE = "#7F8C8D"      # deficit (gri)
 
-# Venituri → Total venituri
+COLOR_REV_LINK = "rgba(46,139,87,0.60)"
+COLOR_EXP_LINK = "rgba(192,57,43,0.60)"
+COLOR_DEF_LINK = "rgba(127,140,141,0.75)"
+
+x_pos = []
+y_pos = []
+
+# Culori pentru fiecare nod
+node_colors = []
+for n in nodes:
+    if (n in revenues.keys()) or (n == "Total venituri"):
+        node_colors.append(COLOR_REV_NODE)
+    elif (n in expenses.keys()) or (n == ""):
+        node_colors.append(COLOR_EXP_NODE)
+        x_pos.append(0.70)
+        y_pos.append(0.40)
+    elif n == "Deficit":
+        node_colors.append(COLOR_DEF_NODE)
+    else:
+        node_colors.append("#BDC3C7")
+
+sources, targets, values, link_colors = [], [], [], []
+
+# Venituri → Total venituri (verde)
 for name, val in revenues.items():
     sources.append(idx[name])
     targets.append(idx["Total venituri"])
     values.append(val)
+    link_colors.append(COLOR_REV_LINK)
 
-# Total venituri + Deficit → Total cheltuieli
-sources += [idx["Total venituri"], idx["Deficit"]]
-targets += [idx["Total cheltuieli"], idx["Total cheltuieli"]]
-values += [total_rev, deficit]
+# Total venituri → Total cheltuieli (verde)
+sources.append(idx["Total venituri"])
+targets.append(idx[""])
+values.append(total_rev)
+link_colors.append(COLOR_REV_LINK)
 
-# Total cheltuieli → Funcții bugetare
+# Deficit → Total cheltuieli (gri, în mijloc)
+sources.append(idx["Deficit"])
+targets.append(idx[""])
+values.append(deficit)
+link_colors.append(COLOR_DEF_LINK)
+
+# Total cheltuieli → Funcții bugetare (roșu)
 for name, val in expenses.items():
-    sources.append(idx["Total cheltuieli"])
+    sources.append(idx[""])
     targets.append(idx[name])
     values.append(val)
+    link_colors.append(COLOR_EXP_LINK)
 
 # =====================================================
 # 5. DIAGRAMA SANKEY
@@ -170,14 +207,16 @@ fig = go.Figure(
                 thickness=18,
                 line=dict(color="rgba(0,0,0,0.2)", width=0.5),
                 label=nodes,
-                color="#5BB2FA",
-                hoverlabel=dict(font=dict(size=15, family="Times New Roman", color="black", shadow="none")),
+                color=node_colors,
+                hoverlabel=dict(
+                    font=dict(size=15, family="Times New Roman", color="black", shadow="none")
+                ),
             ),
             link=dict(
                 source=sources,
-                target=targets, 
+                target=targets,
                 value=values,
-                color="rgba(91, 178, 250, 0.6)",
+                color=link_colors,
             ),
         )
     ]
@@ -195,12 +234,26 @@ fig.update_layout(
         family="Times New Roman",
         size=16,
         color="#000000",
-        
     ),
     height=680,
     margin=dict(l=40, r=40, t=80, b=40),
     paper_bgcolor="white",
     plot_bgcolor="white",
+)
+
+fig.add_annotation(
+    x=0.63,                 # puțin în stânga nodului
+    y=0.58,
+    xref="paper",
+    yref="paper",
+    text="<b>Total cheltuieli</b>",
+    showarrow=False,
+    font=dict(
+        family="Times New Roman",
+        size=16,
+        color="#000000"
+    ),
+    align="right"
 )
 
 st.plotly_chart(fig, use_container_width=True)
@@ -259,7 +312,6 @@ with col_pie2:
     )
     st.plotly_chart(fig_exp_pie, use_container_width=True)
 
-
 # ---- comparație cu aceeași lună din anul precedent (dacă există) ----
 prev_year = selected_year - 1
 prev_date_candidates = df_venituri[
@@ -309,7 +361,6 @@ share_exp_2 = top_exp_2["Valoare"] / total_exp * 100 if total_exp else 0
 # ---- text descriptiv ----
 text_parts = []
 
-# baza – nivelul agregat
 text_parts.append(
     f"În **{month_names_ro[selected_date.month].capitalize()} {selected_date.year}**, "
     f"veniturile totale ale bugetului public național au constituit "
@@ -318,7 +369,6 @@ text_parts.append(
     f"(*{abs(deficit) / total_rev * 100:,.1f}% din venituri*)."
 )
 
-# comparație cu anul precedent – doar dacă avem date
 if prev_rev is not None:
     semn_def = "majorat" if chg_def_pct and chg_def_pct > 0 else "micșorat"
     text_parts.append(
@@ -332,7 +382,6 @@ if prev_rev is not None:
         f"**{abs(chg_def_pct):.1f}%**."
     )
 
-# structură – principalele categorii
 text_parts.append(
     f"Cele mai importante surse de venit au fost:\n"
     f"- **{top_rev_1['Categorie']}**, cu **{top_rev_1['Valoare']:,.1f} mil. lei** "
@@ -347,6 +396,7 @@ text_parts.append(
 )
 
 st.markdown("\n\n".join(text_parts))
+
 # =====================================================
 # 8. DIAGRAMĂ DE EVOLUȚIE VENITURI vs. CHELTUIELI
 # =====================================================
@@ -411,7 +461,6 @@ fig_line.update_layout(
 
 st.plotly_chart(fig_line, use_container_width=True)
 
-
 # =====================================================
 # 9. DATORIA PUBLICĂ – NIVEL ȘI STRUCTURĂ
 # =====================================================
@@ -420,18 +469,15 @@ st.subheader("Datoria publică (cumulativă)")
 
 df_debt_sorted = df_debt.sort_values("Date").copy()
 
-# denumirile trebuie să fie exact ca în fișierul Excel
 col_int = "Datoria internă"
 col_ext = "Datoria externă"
 col_ext_usd = "Datoria externă USD"
 col_fx = "Curs"
 col_gdp = "PIB"
 
-# rândul de datorie pentru perioada selectată (aceeași selected_date ca la buget)
 row_debt = df_debt_sorted[df_debt_sorted["Date"] == selected_date]
 
 if row_debt.empty:
-    # dacă nu găsim perioada exactă, folosim ultima observație și afișăm un mesaj
     row_debt = df_debt_sorted.iloc[[-1]]
     st.warning(
         "Nu există date de datorie pentru perioada selectată; "
@@ -444,7 +490,6 @@ total_debt = float(row_debt[col_int]) + float(row_debt[col_ext])
 share_int = row_debt[col_int] / total_debt * 100 if total_debt else 0
 share_ext = row_debt[col_ext] / total_debt * 100 if total_debt else 0
 
-# KPI–uri pentru perioada selectată
 col_k1, col_k2, col_k3 = st.columns(3)
 col_k1.metric(
     "Datorie internă",
@@ -461,7 +506,6 @@ col_k3.metric(
     f"{total_debt:,.1f} mil. lei"
 )
 
-# ===== Text explicativ pentru perioada selectată =====
 ext_usd = row_debt.get(col_ext_usd, None)
 fx = row_debt.get(col_fx, None)
 gdp_val = row_debt.get(col_gdp, None)
@@ -488,7 +532,6 @@ if pd.notna(gdp_val):
 
 st.markdown(text)
 
-
 # =====================================================
 # 9. Structura datoriei și cursul MDL/USD – pe același rând
 # =====================================================
@@ -499,18 +542,12 @@ df_debt_year = df_debt_sorted[df_debt_sorted["Date"].dt.year == selected_year].c
 if df_debt_year.empty:
     st.info("Nu există date de datorie pentru anul selectat.")
 else:
-    # --- valori pentru Donut ---
-    last_year_row = df_debt_year.iloc[-1]  # de ex. decembrie 2024
+    last_year_row = df_debt_year.iloc[-1]
     d_int_year = float(last_year_row[col_int])
     d_ext_year = float(last_year_row[col_ext])
-    total_year = d_int_year + d_ext_year
 
-    # --- structura layout pe 2 coloane ---
     col_left, col_right = st.columns([1, 1])
 
-    # ===============================
-    # 1️⃣ Donut în stânga
-    # ===============================
     with col_left:
         df_donut = pd.DataFrame({
             "Componentă": ["Datoria internă", "Datoria externă"],
@@ -534,21 +571,15 @@ else:
             font=dict(family="Times New Roman", size=14),
         )
 
-        # Donut + anul mare în colțul din dreapta sus
         st.plotly_chart(fig_donut, use_container_width=True)
         st.markdown(
             f"<div style='font-size:50px; font-weight:700; text-align:right; margin-top:-80px;'>{selected_year}</div>",
             unsafe_allow_html=True,
         )
 
-    # ===============================
-    # 2️⃣ Rata de schimb în dreapta
-    # ===============================
     with col_right:
         df_fx = df_debt_year.copy()
-        df_fx["Lună"] = df_fx["Date"].dt.month.map(
-            lambda m: month_names_ro[m].capitalize()
-        )
+        df_fx["Lună"] = df_fx["Date"].dt.month.map(lambda m: month_names_ro[m].capitalize())
 
         fig_fx = px.line(
             df_fx,
@@ -577,7 +608,6 @@ else:
 
         st.plotly_chart(fig_fx, use_container_width=True)
 
-# ===== Grafic de evoluție a datoriei (internă vs. externă) =====
 st.markdown("#### Evoluția în timp a datoriei interne și externe")
 
 fig_debt = px.line(
