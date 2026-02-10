@@ -461,7 +461,7 @@ current_dir_url = build_current_url()
 
 colA, colB = st.sidebar.columns([1, 1])
 with colA:
-    if st.button("Încarcă folderul"):
+    if st.button("Încarcă datele"):
         try:
             st.session_state["nav_items"] = list_directory(current_dir_url)
             st.sidebar.success("Folder încărcat.")
