@@ -26,8 +26,6 @@ def render():
     df_reexp = res_reexp["data"]
     df_tari  = res_tari["data"]
 
-    st.markdown(sursa_badge(res_lunar), unsafe_allow_html=True)
-    st.markdown("")
 
     if df_lunar.empty:
         st.warning("Fisierul Data.xlsx nu a putut fi citit.")

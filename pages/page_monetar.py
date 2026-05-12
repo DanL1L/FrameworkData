@@ -11,18 +11,15 @@ def render():
     page_header(
         "Sectorul Monetar",
         "PIB, rezerve valutare, baza monetara, depozite · 2000–2024",
-        "Date_Sector_Monetar.xlsx",
+        "BNM",
         "pink"
     )
 
     result = load_monetar()
     df     = result["data"]
 
-    st.markdown(sursa_badge(result), unsafe_allow_html=True)
-    st.markdown("")
-
     if df.empty:
-        st.warning("⚠️ Fisierul Date_Sector_Monetar.xlsx nu a putut fi citit.")
+        st.warning(" Fisierul Date_Sector_Monetar.xlsx nu a putut fi citit.")
         return
 
     YEARS_STR = [str(int(a)) for a in df["an"]]
@@ -53,7 +50,7 @@ def render():
                  f"depozite: {dep_val:,.0f} mil. lei" if dep_val else "", True, "pink"),
     ])
 
-    tab1, tab2, tab3 = st.tabs(["PIB & Inflatie", "Rezerve valutare", "Baza monetara & Depozite"])
+    tab1, tab2, tab3 = st.tabs(["PIB / Inflație", "Rezerve valutare", "Baza monetară / Depozite"])
 
     def _layout(h=280):
         return dict(height=h, paper_bgcolor="white", plot_bgcolor="white",
@@ -71,7 +68,7 @@ def render():
                 hovertemplate="<b>%{x}</b>: %{y:,.0f} mil. lei<extra></extra>"))
             fig.update_layout(**_layout())
             st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-            st.markdown('<div class="chart-source">Sursa: Date_Sector_Monetar.xlsx</div></div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-source">Sursa: BNM</div></div>', unsafe_allow_html=True)
 
         with col2:
             st.markdown('<div class="chart-card"><div class="chart-card-title">Indicele Preturilor de Consum — sfarsit de an (%)</div>', unsafe_allow_html=True)
@@ -84,13 +81,13 @@ def render():
                     annotation_text="Tinta 5%", annotation_font_size=9)
                 fig2.update_layout(**{**_layout(), "yaxis": dict(gridcolor="#f1efe8", tickfont=dict(size=10), title="%")})
                 st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
-            st.markdown('<div class="chart-source">Sursa: Date_Sector_Monetar.xlsx</div></div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-source">Sursa: BNM</div></div>', unsafe_allow_html=True)
 
         st.markdown('<div class="chart-card"><div class="chart-card-title">Date anuale — sinteza</div>', unsafe_allow_html=True)
         st.dataframe(df[["an","pib_mil_lei","ipc_sfarsit_an"]].rename(columns={
             "an":"An","pib_mil_lei":"PIB (mil. lei)","ipc_sfarsit_an":"IPC sfarsit an (%)"}),
             use_container_width=True, hide_index=True)
-        st.markdown('<div class="chart-source">Sursa: Date_Sector_Monetar.xlsx</div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-source">Sursa: BNM</div></div>', unsafe_allow_html=True)
 
     with tab2:
         col1, col2 = st.columns(2)
@@ -103,7 +100,7 @@ def render():
                     hovertemplate="<b>%{x}</b>: %{y:,.1f} mil. USD<extra></extra>"))
                 fig3.update_layout(**{**_layout(), "yaxis": dict(gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False, title="mil. USD")})
                 st.plotly_chart(fig3, use_container_width=True, config={"displayModeBar": False})
-            st.markdown('<div class="chart-source">Sursa: Date_Sector_Monetar.xlsx</div></div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-source">Sursa: BNMx</div></div>', unsafe_allow_html=True)
 
         with col2:
             st.markdown('<div class="chart-card"><div class="chart-card-title">Rezerve — variatie anuala (%)</div>', unsafe_allow_html=True)
@@ -116,7 +113,7 @@ def render():
                 fig4.add_hline(y=0, line_color="#e8e4dc", line_width=1)
                 fig4.update_layout(**{**_layout(), "yaxis": dict(gridcolor="#f1efe8", tickfont=dict(size=10), title="%")})
                 st.plotly_chart(fig4, use_container_width=True, config={"displayModeBar": False})
-            st.markdown('<div class="chart-source">Calcule pe baza Date_Sector_Monetar.xlsx</div></div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-source">Calcule pe baza date BNM</div></div>', unsafe_allow_html=True)
 
     with tab3:
         col1, col2 = st.columns(2)
@@ -129,7 +126,7 @@ def render():
                     hovertemplate="<b>%{x}</b>: %{y:,.0f} mil. lei<extra></extra>"))
                 fig5.update_layout(**{**_layout(), "yaxis": dict(gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False, title="mil. lei")})
                 st.plotly_chart(fig5, use_container_width=True, config={"displayModeBar": False})
-            st.markdown('<div class="chart-source">Sursa: Date_Sector_Monetar.xlsx</div></div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-source">Sursa: BNM</div></div>', unsafe_allow_html=True)
 
         with col2:
             st.markdown('<div class="chart-card"><div class="chart-card-title">Depozite (mil. lei)</div>', unsafe_allow_html=True)
@@ -140,11 +137,11 @@ def render():
                     hovertemplate="<b>%{x}</b>: %{y:,.0f} mil. lei<extra></extra>"))
                 fig6.update_layout(**{**_layout(), "yaxis": dict(gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False, title="mil. lei")})
                 st.plotly_chart(fig6, use_container_width=True, config={"displayModeBar": False})
-            st.markdown('<div class="chart-source">Sursa: Date_Sector_Monetar.xlsx</div></div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-source">Sursa: BNM</div></div>', unsafe_allow_html=True)
 
         st.markdown('<div class="chart-card"><div class="chart-card-title">Tabel — Baza monetara & Depozite</div>', unsafe_allow_html=True)
         cols_b = {c: c for c in ["an","baza_monetara_mil_lei","depozite_mil_lei"] if c in df.columns}
         st.dataframe(df[list(cols_b)].rename(columns={
             "an":"An","baza_monetara_mil_lei":"Baza monetara (mil. lei)","depozite_mil_lei":"Depozite (mil. lei)"}),
             use_container_width=True, hide_index=True)
-        st.markdown('<div class="chart-source">Sursa: Date_Sector_Monetar.xlsx</div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-source">Sursa: BNM</div></div>', unsafe_allow_html=True)

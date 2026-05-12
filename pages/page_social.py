@@ -18,8 +18,6 @@ def render():
     result = load_social()
     df     = result["data"]
 
-    st.markdown(sursa_badge(result), unsafe_allow_html=True)
-    st.markdown("")
 
     if df.empty:
         st.warning(" Fisierul Date_Sector_Social.xlsx nu a putut fi citit.")
@@ -55,7 +53,7 @@ def render():
                  f"trimestrul {trim_label}", True, "teal"),
     ])
 
-    tab1, tab2, tab3 = st.tabs(["Somaj & Ocupare", "Salarii", "Date tabel"])
+    tab1, tab2, tab3 = st.tabs(["Șomaj / Ocupare", "Salarii", "Date tabel"])
 
     LABELS = df["trim_label"].tolist() if "trim_label" in df.columns else [str(int(a)) for a in df["an"]]
 
