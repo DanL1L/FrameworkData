@@ -29,7 +29,7 @@ PAGES = {
     "Sectorul Monetar":           {"icon": "", "module": page_monetar,   "color": "#993556"},
     "Sectorul Public":            {"icon": "", "module": page_public,    "color": "#854F0B"},
     "Sectorul Social":            {"icon": "", "module": page_social,    "color": "#0F6E56"},
-    #  "Surse & API":                {"icon": "", "module": page_surse,    "color": "#444441"},
+    #   "Surse & API":                {"icon": "", "module": page_surse,    "color": "#444441"},
 }
 
 with st.sidebar:
