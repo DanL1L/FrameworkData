@@ -239,11 +239,11 @@ def render():
 
     with col3:
         st.markdown('<div class="chart-card"><div class="chart-card-title">IPC mediu anual (%)</div>', unsafe_allow_html=True)
-        ipc_vals   = df["ipc_mediu"].tolist()
+        ipc_vals   = (df["ipc_mediu"] - 100).tolist()
         colors_ipc = [
-            "#A32D2D" if v > 120 else
-            "#E24B4A" if v > 110 else
-            "#BA7517" if v > 105 else
+            "#1D9E75" if v > 120 else
+            "#1D9E75" if v > 110 else
+            "#1D9E75" if v > 105 else
             "#1D9E75"
             for v in ipc_vals
         ]
@@ -257,7 +257,7 @@ def render():
         ))
         fig3.update_layout(**{**_layout(), "yaxis": dict(
             gridcolor="#f1efe8", tickfont=dict(size=10),
-            title="%", range=[95, max(ipc_vals) * 1.08]
+            title="%", range=[0, max(ipc_vals) * 1.15]
         )})
         st.plotly_chart(fig3, use_container_width=True, config={"displayModeBar": False})
         st.markdown(f'<div class="chart-source">Sursa: {sursa_lbl}</div></div>', unsafe_allow_html=True)
