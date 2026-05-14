@@ -204,7 +204,7 @@ def render():
                 gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False, title="mil. lei"
             )})
             st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-            st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet PIB</div></div>', unsafe_allow_html=True)
+            # st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet PIB</div></div>', unsafe_allow_html=True)
 
         with col2:
             st.markdown('<div class="chart-card"><div class="chart-card-title">Crestere reala a PIB (%, fata de anul precedent)</div>', unsafe_allow_html=True)
@@ -223,7 +223,7 @@ def render():
                 gridcolor="#f1efe8", tickfont=dict(size=10), title="% an/an"
             )})
             st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
-            st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet PIB (calcule)</div></div>', unsafe_allow_html=True)
+            # st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet PIB (calcule)</div></div>', unsafe_allow_html=True)
 
         ramuri_cols = [
             ("Agricultura, silvicultura si pescuit curent", "Agricultura"),
@@ -258,7 +258,7 @@ def render():
                               ticksuffix="%", range=[0, 100]),
             })
             st.plotly_chart(fig3, use_container_width=True, config={"displayModeBar": False})
-            st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet PIB</div></div>', unsafe_allow_html=True)
+            # st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet PIB</div></div>', unsafe_allow_html=True)
 
         st.markdown('<div class="chart-card"><div class="chart-card-title">Contributia la cresterea PIB (p.p.) — selecteaza anul</div>', unsafe_allow_html=True)
         all_years = sorted(df_pib["An"].dropna().unique())
@@ -315,7 +315,7 @@ def render():
                     gridcolor="#f1efe8", tickfont=dict(size=10), title="p.p."
                 )})
                 st.plotly_chart(fig7, use_container_width=True, config={"displayModeBar": False})
-        st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet PIB / PIB_utilizari (calcule)</div></div>', unsafe_allow_html=True)
+        # st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet PIB / PIB_utilizari (calcule)</div></div>', unsafe_allow_html=True)
 
     # ═══════════════════════════════════════════════════════════════════════════
     # TAB INDUSTRIE
@@ -339,7 +339,7 @@ def render():
                 gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False, title="mil. lei"
             )})
             st.plotly_chart(fig_il, use_container_width=True, config={"displayModeBar": False})
-            st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Real</div></div>', unsafe_allow_html=True)
+            # st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Real</div></div>', unsafe_allow_html=True)
 
         with col2:
             st.markdown('<div class="chart-card"><div class="chart-card-title">Indicii volumului productiei industriale (% fata de an precedent)</div>', unsafe_allow_html=True)
@@ -383,7 +383,7 @@ def render():
                 <span><span style="color:#A32D2D;font-weight:500">▼</span> &lt;100% — scadere</span>
             </div>
             """, unsafe_allow_html=True)
-            st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Industrie</div></div>', unsafe_allow_html=True)
+            # st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Industrie</div></div>', unsafe_allow_html=True)
 
         st.markdown('<div class="chart-card"><div class="chart-card-title">Contributia subramurilor la cresterea industriei prelucrătoare (p.p.) — selecteaza anul</div>', unsafe_allow_html=True)
         years_prel = sorted(df_prel["An"].dropna().unique())
@@ -415,7 +415,7 @@ def render():
                     yaxis=dict(gridcolor="#f1efe8", tickfont=dict(size=9)),
                 )
                 st.plotly_chart(fig_pp, use_container_width=True, config={"displayModeBar": False})
-        st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Industrie_Prel (calcule)</div></div>', unsafe_allow_html=True)
+        # st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Industrie_Prel (calcule)</div></div>', unsafe_allow_html=True)
 
     # ═══════════════════════════════════════════════════════════════════════════
     # TAB AGRICULTURA
@@ -438,7 +438,7 @@ def render():
                 gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False, title="mil. lei"
             )})
             st.plotly_chart(fig_agr, use_container_width=True, config={"displayModeBar": False})
-            st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Real</div></div>', unsafe_allow_html=True)
+            # st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Real</div></div>', unsafe_allow_html=True)
 
         with col2:
             st.markdown('<div class="chart-card"><div class="chart-card-title">Indici trimestriali volum productie agricola (%)</div>', unsafe_allow_html=True)
@@ -469,7 +469,7 @@ def render():
                 "yaxis": dict(gridcolor="#f1efe8", tickfont=dict(size=10), title="%"),
             })
             st.plotly_chart(fig_aqt, use_container_width=True, config={"displayModeBar": False})
-            st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Agricultura</div></div>', unsafe_allow_html=True)
+            # st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Agricultura</div></div>', unsafe_allow_html=True)
 
     # ═══════════════════════════════════════════════════════════════════════════
     # TAB COMERT INTERN
@@ -693,7 +693,7 @@ def render():
                               zeroline=False, title="mii pasageri"),
             })
             st.plotly_chart(fig_sp, use_container_width=True, config={"displayModeBar": False})
-            st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Tranport</div></div>', unsafe_allow_html=True)
+            # st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Tranport</div></div>', unsafe_allow_html=True)
     st.markdown("---")
     st.markdown(
         '<p style="font-size:10px;color:#b4b2a9;font-family:IBM Plex Mono,monospace">'
