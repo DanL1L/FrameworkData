@@ -72,7 +72,7 @@ def get_salarii_anual(ani: list = None) -> dict:
         df = _normalizeaza_salarii(df)
         if df is not None:
             return {"data": df, "live": True,
-                    "sursa": "BNS", "ts": ts, "eroare": None}
+                    "sursa": "BNS TFM08 (saved query)", "ts": ts, "eroare": None}
 
     # Tentativa 2: POST direct pe TFM08
     query = {
@@ -97,7 +97,7 @@ def get_salarii_anual(ani: list = None) -> dict:
     df_fb = pd.DataFrame(_FALLBACK_SALARII)
     df_fb = df_fb[df_fb["an"].astype(str).isin(ani)].reset_index(drop=True)
     return {"data": df_fb, "live": False,
-            "sursa": "BNS",
+            "sursa": "BNS — date de referinta (offline)",
             "ts": ts, "eroare": "API BNS indisponibil"}
 
 
@@ -122,7 +122,7 @@ def get_piata_muncii_anual(ani: list = None) -> dict:
         df = _normalizeaza_piata(df)
         if df is not None:
             return {"data": df, "live": True,
-                    "sursa": "BNS", "ts": ts, "eroare": None}
+                    "sursa": "BNS TFM01 (saved query)", "ts": ts, "eroare": None}
 
     # Tentativa 2: POST direct pe TFM01
     query = {
@@ -145,7 +145,7 @@ def get_piata_muncii_anual(ani: list = None) -> dict:
     df_fb = pd.DataFrame(_FALLBACK_PIATA_MUNCII)
     df_fb = df_fb[df_fb["an"].astype(str).isin(ani)].reset_index(drop=True)
     return {"data": df_fb, "live": False,
-            "sursa": "BNS ",
+            "sursa": "BNS — date de referinta (offline)",
             "ts": ts, "eroare": "API BNS indisponibil"}
 
 
@@ -171,7 +171,7 @@ def get_populatie_someri_anual(ani: list = None) -> dict:
         df = _normalizeaza_populatie(df)
         if df is not None:
             return {"data": df, "live": True,
-                    "sursa": "BNS", "ts": ts, "eroare": None}
+                    "sursa": "BNS TFM03 (saved query)", "ts": ts, "eroare": None}
 
     # Tentativa 2: POST pe TFM03 (populatie ocupata + someri)
     query_q = {
@@ -194,7 +194,7 @@ def get_populatie_someri_anual(ani: list = None) -> dict:
     df_fb = pd.DataFrame(_FALLBACK_POPULATIE)
     df_fb = df_fb[df_fb["an"].astype(str).isin(ani)].reset_index(drop=True)
     return {"data": df_fb, "live": False,
-            "sursa": "BNS",
+            "sursa": "BNS — date de referinta (offline)",
             "ts": ts, "eroare": "API BNS indisponibil"}
 
 
@@ -392,6 +392,149 @@ def _normalizeaza_populatie(df: pd.DataFrame) -> pd.DataFrame | None:
         # Fallback: o singura serie numerica → presupunem populatie ocupata
         result = df[[an_col, val_col]].rename(
             columns={an_col: "an", val_col: "pop_ocupata_mii"}
+        ).dropna().sort_values("an").reset_index(drop=True)
+        return result if not result.empty else None
+
+    except Exception:
+        return None
+
+
+# ── 4. Populatie ocupata pe gen — barbati / femei / total ────────────────────
+
+# Fallback — date cunoscute BNS (mii persoane, medii anuale)
+_FALLBACK_POP_GEN = {
+    "an":       [2015,  2016,  2017,  2018,  2019,  2020,  2021,  2022,  2023,  2024],
+    "barbati":  [426.1, 432.2, 424.8, 422.5, 417.3, 401.8, 405.2, 411.4, 413.6, 408.2],
+    "femei":    [412.3, 416.9, 411.7, 409.9, 406.7, 391.9, 393.4, 396.8, 398.8, 396.9],
+    "total":    [838.4, 849.1, 836.5, 832.4, 824.0, 793.7, 798.6, 808.2, 812.4, 805.1],
+}
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def get_populatie_gen_anual(ani: list = None) -> dict:
+    """
+    Populatie ocupata defalcata pe gen (barbati / femei / total) — date anuale BNS.
+    Saved query: ef9f71d7-a859-4d5d-9c03-1cf128ff9616
+    Tabel BNS:   SocEc/FM/TFM03
+
+    Returneaza:
+      {"data": DataFrame[an, barbati, femei, total],
+       "live": bool, "sursa": str, "ts": str, "eroare": str|None}
+    """
+    ani = ani or ANI_REF
+    ts  = datetime.now().strftime("%d.%m.%Y %H:%M")
+
+    # Tentativa 1: saved query (returneaza date cu sex defalcat)
+    df_raw = _try_saved_query("ef9f71d7-a859-4d5d-9c03-1cf128ff9616")
+    if df_raw is not None:
+        df = _normalizeaza_pop_gen(df_raw)
+        if df is not None:
+            return {"data": df, "live": True,
+                    "sursa": "BNS TFM03 (saved query)", "ts": ts, "eroare": None}
+
+    # Tentativa 2: POST pe TFM03 cu selectie sex
+    query_gen = {
+        "query": [
+            {"code": "Sex",
+             "selection": {"filter": "item", "values": ["1", "2", "TOT"]}},
+            {"code": "Ani",
+             "selection": {"filter": "item", "values": ani}},
+        ],
+        "response": {"format": "json"}
+    }
+    for tabel in ["SocEc/FM/TFM03/FM03.px", "SocEc/FM/TFM03/TFM03.px",
+                  "SocEc/FM/TFM03/OCC01.px"]:
+        df_raw = _try_post(tabel, query_gen)
+        if df_raw is not None:
+            df = _normalizeaza_pop_gen(df_raw)
+            if df is not None:
+                return {"data": df, "live": True,
+                        "sursa": f"BNS {tabel}", "ts": ts, "eroare": None}
+
+    # Tentativa 3: POST fara filtru sex (parsam ce vine)
+    query_all = {
+        "query": [
+            {"code": "Ani",
+             "selection": {"filter": "item", "values": ani}},
+        ],
+        "response": {"format": "json"}
+    }
+    for tabel in ["SocEc/FM/TFM03/FM03.px", "SocEc/FM/TFM03/TFM03.px"]:
+        df_raw = _try_post(tabel, query_all)
+        if df_raw is not None:
+            df = _normalizeaza_pop_gen(df_raw)
+            if df is not None:
+                return {"data": df, "live": True,
+                        "sursa": f"BNS {tabel}", "ts": ts, "eroare": None}
+
+    # Fallback
+    df_fb = pd.DataFrame(_FALLBACK_POP_GEN)
+    df_fb = df_fb[df_fb["an"].astype(str).isin(ani)].reset_index(drop=True)
+    return {"data": df_fb, "live": False,
+            "sursa": "BNS — date de referinta (offline)",
+            "ts": ts, "eroare": "API BNS indisponibil — se folosesc date de referinta"}
+
+
+def _normalizeaza_pop_gen(df: pd.DataFrame) -> pd.DataFrame | None:
+    """
+    Normalizeaza raspunsul PX-Web la DataFrame wide:
+      [an (int), barbati (float), femei (float), total (float)]
+
+    Accepta structuri cu coloana Sex/Gen sau cu coloane separate.
+    """
+    if df is None or df.empty:
+        return None
+    try:
+        an_col  = next((c for c in df.columns
+                        if "an" in c.lower() or "year" in c.lower()), None)
+        val_col = df.columns[-1]
+
+        if an_col is None:
+            return None
+
+        df = df.copy()
+        df[an_col]  = pd.to_numeric(df[an_col],  errors="coerce")
+        df[val_col] = pd.to_numeric(df[val_col], errors="coerce")
+
+        # Detecta coloana de sex/gen
+        sex_col = next((c for c in df.columns
+                        if c not in [an_col, val_col]
+                        and any(kw in c.lower() for kw in
+                                ["sex", "gen", "masculin", "feminin", "barbat", "femei"])),
+                       None)
+
+        if sex_col:
+            pivot = df.pivot_table(index=an_col, columns=sex_col,
+                                   values=val_col, aggfunc="mean")
+            pivot = pivot.reset_index().rename(columns={an_col: "an"})
+            pivot.columns.name = None
+
+            # Mapare flexibila la barbati / femei / total
+            rename = {}
+            for c in pivot.columns:
+                cl = str(c).lower()
+                if any(kw in cl for kw in ["masculin","barbat","male","m","b","1"]):
+                    rename[c] = "barbati"
+                elif any(kw in cl for kw in ["feminin","femei","female","f","2"]):
+                    rename[c] = "femei"
+                elif any(kw in cl for kw in ["total","ambele","tot","t","3"]):
+                    rename[c] = "total"
+            pivot = pivot.rename(columns=rename)
+
+            has_b = "barbati" in pivot.columns
+            has_f = "femei"   in pivot.columns
+            has_t = "total"   in pivot.columns
+
+            # Calculeaza total daca lipseste dar avem ambele genuri
+            if has_b and has_f and not has_t:
+                pivot["total"] = pivot["barbati"] + pivot["femei"]
+
+            if has_b or has_f:
+                return pivot.sort_values("an").reset_index(drop=True)
+
+        # Nu am gasit coloana sex — returneaza doar total
+        result = df[[an_col, val_col]].rename(
+            columns={an_col: "an", val_col: "total"}
         ).dropna().sort_values("an").reset_index(drop=True)
         return result if not result.empty else None
 

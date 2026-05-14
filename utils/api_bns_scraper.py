@@ -108,7 +108,7 @@ def get_indicatori_cheie() -> dict:
         return {
             "data":   _enrich_fallback(),
             "live":   False,
-            "sursa":  "statistica.gov.md — fallback",
+            "sursa":  "statistica.gov.md",
             "ts":     ts,
             "eroare": "Structura HTML modificata — se folosesc date de referinta.",
         }

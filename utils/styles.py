@@ -29,8 +29,8 @@ def inject_styles():
     }
 
     /* ── Hide default Streamlit chrome ── */
-    #MainMenu, footer, header { visibility: hidden; }
-    .block-container { padding-top: 1.5rem; padding-bottom: 2rem; max-width: 95% !important; }
+    #MainMenu, footer { visibility: hidden; }
+    .block-container { padding-top: 2.5rem; padding-bottom: 2rem; max-width: 95% !important; }
 
     /* ── Sidebar ── */
     [data-testid="stSidebar"] {
