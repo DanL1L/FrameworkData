@@ -548,10 +548,10 @@ def render():
                               zeroline=False, title=UNIT_LBL),
             })
             st.plotly_chart(fig_cs, use_container_width=True, config={"displayModeBar": False})
-            st.markdown(
-                '<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Comert_Intern</div></div>',
-                unsafe_allow_html=True
-            )
+            # st.markdown(
+            #     '<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Comert_Intern</div></div>',
+            #     unsafe_allow_html=True
+            # )
 
         with col2:
             # ── Crestere reala comert ─────────────────────────────────────────
@@ -596,10 +596,10 @@ def render():
                 "yaxis": dict(gridcolor="#f1efe8", tickfont=dict(size=10), title="%"),
             })
             st.plotly_chart(fig_cg, use_container_width=True, config={"displayModeBar": False})
-            st.markdown(
-                '<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Comert_Intern</div></div>',
-                unsafe_allow_html=True
-            )
+            # st.markdown(
+            #     '<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Comert_Intern</div></div>',
+            #     unsafe_allow_html=True
+            # )
 
     # ═══════════════════════════════════════════════════════════════════════════
     # TAB TRANSPORT
@@ -626,7 +626,7 @@ def render():
                               zeroline=False, title="mii tone"),
             })
             st.plotly_chart(fig_tm, use_container_width=True, config={"displayModeBar": False})
-            st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Tranport</div></div>', unsafe_allow_html=True)
+            # st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Tranport</div></div>', unsafe_allow_html=True)
 
         with col2:
             st.markdown('<div class="chart-card"><div class="chart-card-title">Pasageri transportati total (mii)</div>', unsafe_allow_html=True)
@@ -647,7 +647,7 @@ def render():
                               zeroline=False, title="mii pasageri"),
             })
             st.plotly_chart(fig_tp, use_container_width=True, config={"displayModeBar": False})
-            st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Tranport</div></div>', unsafe_allow_html=True)
+            # st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Tranport</div></div>', unsafe_allow_html=True)
 
         col3, col4 = st.columns(2)
         cols_marf = [c for c in df_trans.columns
@@ -673,7 +673,7 @@ def render():
                               zeroline=False, title="mii tone"),
             })
             st.plotly_chart(fig_sm, use_container_width=True, config={"displayModeBar": False})
-            st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Tranport</div></div>', unsafe_allow_html=True)
+            # st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Tranport</div></div>', unsafe_allow_html=True)
 
         with col4:
             st.markdown('<div class="chart-card"><div class="chart-card-title">Structura transport pasageri pe tip (mii)</div>', unsafe_allow_html=True)
@@ -697,7 +697,7 @@ def render():
     st.markdown("---")
     st.markdown(
         '<p style="font-size:10px;color:#b4b2a9;font-family:IBM Plex Mono,monospace">'
-        'Sursa: BNS statistica.gov.md/ro · '
+        'Sursa: BNS statistica.gov.md · '
         'Platforma MEDD — Directia Analiza si Prognoza Macroeconomica.</p>',
         unsafe_allow_html=True
     )
