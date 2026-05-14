@@ -283,8 +283,8 @@ def render():
     # ── TAB 5: Servicii ───────────────────────────────────────────────────────
     with tab5:
         df_serv = res_serv["data"]
-        st.markdown(sursa_badge(res_serv), unsafe_allow_html=True)
-        st.markdown("")
+        # st.markdown(sursa_badge(res_serv), unsafe_allow_html=True)
+        # st.markdown("")
 
         if df_serv.empty:
             st.warning("Fisierul Date_Servicii.xlsx nu a putut fi citit.")

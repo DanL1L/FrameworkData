@@ -50,7 +50,7 @@ def render():
                  f"depozite: {dep_val:,.0f} mil. lei" if dep_val else "", True, "pink"),
     ])
 
-    tab1, tab2, tab3 = st.tabs(["PIB / Inflație", "Rezerve valutare", "Baza monetară / Depozite"])
+    tab1, tab3 = st.tabs(["Date sector monetar", "Baza monetară / Depozite"])
 
     def _layout(h=280):
         return dict(height=h, paper_bgcolor="white", plot_bgcolor="white",
@@ -82,39 +82,31 @@ def render():
                 fig2.update_layout(**{**_layout(), "yaxis": dict(gridcolor="#f1efe8", tickfont=dict(size=10), title="%")})
                 st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
             st.markdown('<div class="chart-source">Sursa: BNM</div></div>', unsafe_allow_html=True)
-
-        st.markdown('<div class="chart-card"><div class="chart-card-title">Date anuale — sinteza</div>', unsafe_allow_html=True)
-        st.dataframe(df[["an","pib_mil_lei","ipc_sfarsit_an"]].rename(columns={
-            "an":"An","pib_mil_lei":"PIB (mil. lei)","ipc_sfarsit_an":"IPC sfarsit an (%)"}),
-            use_container_width=True, hide_index=True)
-        st.markdown('<div class="chart-source">Sursa: BNM</div></div>', unsafe_allow_html=True)
-
-    with tab2:
+        
         col1, col2 = st.columns(2)
         with col1:
             st.markdown('<div class="chart-card"><div class="chart-card-title">Rezerve valutare brute BNM (mil. USD)</div>', unsafe_allow_html=True)
             if "rezerve_mln_usd" in df.columns:
-                fig3 = go.Figure(go.Scatter(x=YEARS_STR, y=df["rezerve_mln_usd"].tolist(),
-                    mode="lines+markers", line=dict(color="#185FA5", width=2.5), marker=dict(size=6),
-                    fill="tozeroy", fillcolor="rgba(24,95,165,0.08)",
-                    hovertemplate="<b>%{x}</b>: %{y:,.1f} mil. USD<extra></extra>"))
-                fig3.update_layout(**{**_layout(), "yaxis": dict(gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False, title="mil. USD")})
-                st.plotly_chart(fig3, use_container_width=True, config={"displayModeBar": False})
-            st.markdown('<div class="chart-source">Sursa: BNMx</div></div>', unsafe_allow_html=True)
+                        fig3 = go.Figure(go.Scatter(x=YEARS_STR, y=df["rezerve_mln_usd"].tolist(),
+                            mode="lines+markers", line=dict(color="#185FA5", width=2.5), marker=dict(size=6),
+                            fill="tozeroy", fillcolor="rgba(24,95,165,0.08)",
+                            hovertemplate="<b>%{x}</b>: %{y:,.1f} mil. USD<extra></extra>"))
+                        fig3.update_layout(**{**_layout(), "yaxis": dict(gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False, title="mil. USD")})
+                        st.plotly_chart(fig3, use_container_width=True, config={"displayModeBar": False})
+            st.markdown('<div class="chart-source">Sursa: BNMx</div></div>', unsafe_allow_html=True)                   
 
         with col2:
-            st.markdown('<div class="chart-card"><div class="chart-card-title">Rezerve — variatie anuala (%)</div>', unsafe_allow_html=True)
-            if "rezerve_mln_usd" in df.columns:
-                rez_pct = df["rezerve_mln_usd"].pct_change() * 100
-                colors_rez = ["#1D9E75" if v >= 0 else "#E24B4A" for v in rez_pct.fillna(0)]
-                fig4 = go.Figure(go.Bar(x=YEARS_STR, y=rez_pct.tolist(),
-                    marker_color=colors_rez, opacity=0.85,
-                    hovertemplate="<b>%{x}</b>: %{y:+.1f}%<extra></extra>"))
-                fig4.add_hline(y=0, line_color="#e8e4dc", line_width=1)
-                fig4.update_layout(**{**_layout(), "yaxis": dict(gridcolor="#f1efe8", tickfont=dict(size=10), title="%")})
-                st.plotly_chart(fig4, use_container_width=True, config={"displayModeBar": False})
-            st.markdown('<div class="chart-source">Calcule pe baza date BNM</div></div>', unsafe_allow_html=True)
-
+                    st.markdown('<div class="chart-card"><div class="chart-card-title">Rezerve — variatie anuala (%)</div>', unsafe_allow_html=True)
+                    if "rezerve_mln_usd" in df.columns:
+                        rez_pct = df["rezerve_mln_usd"].pct_change() * 100
+                        colors_rez = ["#1D9E75" if v >= 0 else "#E24B4A" for v in rez_pct.fillna(0)]
+                        fig4 = go.Figure(go.Bar(x=YEARS_STR, y=rez_pct.tolist(),
+                            marker_color=colors_rez, opacity=0.85,
+                            hovertemplate="<b>%{x}</b>: %{y:+.1f}%<extra></extra>"))
+                        fig4.add_hline(y=0, line_color="#e8e4dc", line_width=1)
+                        fig4.update_layout(**{**_layout(), "yaxis": dict(gridcolor="#f1efe8", tickfont=dict(size=10), title="%")})
+                        st.plotly_chart(fig4, use_container_width=True, config={"displayModeBar": False})
+                    st.markdown('<div class="chart-source">Calcule pe baza date BNM</div></div>', unsafe_allow_html=True)
     with tab3:
         col1, col2 = st.columns(2)
         with col1:

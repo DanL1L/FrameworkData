@@ -4,7 +4,7 @@ import pandas as pd
 import os
 from utils.state import page_header, kpi_card, kpi_row
 from utils.charts import line_chart, bar_chart
-from data.demo_data import YEARS_STR, venituri_pib, cheltuieli_pib, sold_pib
+from data.demo_data import YEARS_STR, sold_pib
 
 
 # ── Loaders ───────────────────────────────────────────────────────────────────
@@ -35,6 +35,79 @@ def _load_bpn() -> dict:
         df_c = pd.read_excel(path, sheet_name="Cheltuieli",  index_col=0)
         df_d = pd.read_excel(path, sheet_name="Deficit BPN", index_col=0)
         return {"ok": True, "venituri": df_v, "cheltuieli": df_c, "deficit": df_d}
+    except Exception as e:
+        return {"ok": False, "eroare": str(e)}
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def _load_vc() -> dict:
+    """
+    Data_Venituri_Cheltuieli.xlsx — date lunare agregate anual.
+    Sheets: Venituri | Cheltuieli_F | Cheltuieli_CE
+    Returneaza DataFrames anuale cu coloane per componenta (mil. lei).
+    2025 are 11 luni — marcat ca partial.
+    """
+    path = _find("Data_Venituri_Cheltuieli.xlsx")
+    if path is None:
+        return {"ok": False, "eroare": "Data_Venituri_Cheltuieli.xlsx negasit in /data"}
+    try:
+        xl = pd.ExcelFile(path)
+
+        # ── Venituri ─────────────────────────────────────────────────────────
+        df_v = pd.read_excel(xl, sheet_name="Venituri")
+        df_v["Date"] = pd.to_datetime(df_v["Date"], errors="coerce")
+        df_v["An"]   = df_v["Date"].dt.year
+        # Numar luni per an → marcheaza partial
+        luni_per_an  = df_v.groupby("An")["Date"].count()
+        df_van = df_v.groupby("An").sum(numeric_only=True)
+        df_van["luni"] = luni_per_an
+
+        # Redenumire coloane scurte pentru grafic
+        rename_v = {
+            "Impozit pe venitul persoanelor fizice":              "Imp. venit fizic",
+            "Impozit pe venitul persoanelor juridice":            "Imp. venit juridic",
+            "Imp. pe proprietate":                                "Proprietate",
+            "TVA local":                                          "TVA local",
+            "TVA la marfurile importate":                         "TVA import",
+            "Accize total":                                       "Accize",
+            "Contribuţii de asigurări sociale de stat obligatorii": "Contrib. sociale",
+            "Prime de asigurare obligatorie de asistenţă medicală": "Prime asig. med.",
+            "Granturi":                                           "Granturi",
+            "Alte venituri":                                      "Alte venituri",
+            "TOTAL VENITURI":                                     "Total venituri",
+        }
+        df_van = df_van.rename(columns=rename_v)
+
+        # ── Cheltuieli_CE (pe clasificatie economica) ─────────────────────────
+        df_ce = pd.read_excel(xl, sheet_name="Cheltuieli_CE", header=1)
+        df_ce.columns = [str(c).strip() for c in df_ce.columns]
+        df_ce["Date"] = pd.to_datetime(df_ce["Date"], errors="coerce")
+        df_ce = df_ce.dropna(subset=["Date"])
+        df_ce["An"]   = df_ce["Date"].dt.year
+        df_cean = df_ce.groupby("An").sum(numeric_only=True)
+
+        # ── Cheltuieli_F (pe clasificatie functionala) ─────────────────────────
+        df_f = pd.read_excel(xl, sheet_name="Cheltuieli_F")
+        df_f["Date"] = pd.to_datetime(df_f["Date"], errors="coerce")
+        df_f = df_f.dropna(subset=["Date"])
+        df_f["An"]   = df_f["Date"].dt.year
+        df_fan = df_f.groupby("An").sum(numeric_only=True)
+
+        # Ani disponibili cu date complete (>= 10 luni)
+        ani_ok  = sorted([a for a, l in luni_per_an.items() if l >= 10])
+        an_max  = max(ani_ok)
+        partial = luni_per_an.get(an_max, 12) < 12
+
+        return {
+            "ok": True,
+            "venituri": df_van,
+            "chelt_ec": df_cean,
+            "chelt_fc": df_fan,
+            "ani": ani_ok,
+            "an_max": an_max,
+            "partial": partial,
+            "luni_max": int(luni_per_an.get(an_max, 12)),
+        }
     except Exception as e:
         return {"ok": False, "eroare": str(e)}
 
@@ -84,7 +157,7 @@ CULORI_CHELT = ["#0D2B6B","#1A4FA0","#2D6EC8","#5B9BD5","#8CB4E1","#B8D4EE","#D9
 def render():
     page_header(
         "Sectorul Public",
-        "Finante publice, executie bugetara BPN, datorie publica · 2019–2025",
+        "Finante publice, executie bugetara BPN, datorie publică· 2019–2025",
         "Ministerul Finantelor — Executie bugetara",
         "amber"
     )
@@ -92,8 +165,10 @@ def render():
     # ── Incarca date ──────────────────────────────────────────────────────────
     bpn      = _load_bpn()
     dat_res  = _load_datorie()
+    vc       = _load_vc()
     bpn_ok   = bpn["ok"]
     dat_ok   = dat_res["ok"]
+    vc_ok    = vc["ok"]
 
     # Date BPN
     if bpn_ok:
@@ -148,7 +223,7 @@ def render():
                  "sub pragul UE de 60%", dat_last < 60, "amber"),
     ])
 
-    tab1, tab2 = st.tabs(["Executie bugetară", "Datorie publică"])
+    tab1, tab2, tab3 = st.tabs(["Executie bugetara", "Structura BPN", "Datorie publică"])
 
     def _layout(h=300):
         return dict(
@@ -157,66 +232,272 @@ def render():
             margin=dict(l=10, r=10, t=10, b=10),
             xaxis=dict(showgrid=False, linecolor="#e8e4dc", tickfont=dict(size=10)),
             yaxis=dict(gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False),
-            legend=dict(orientation="h", y=-0.20, x=0,
-                        font=dict(size=9), bgcolor="rgba(0,0,0,0)", itemwidth=30),
+            legend=dict(orientation="h", y=1.05, x=0,
+                        font=dict(size=9), bgcolor="rgba(0,0,0,0)"),
         )
 
-    # ── Tab 1: Executie bugetara ──────────────────────────────────────────────
+    # ── Tab 1: Executie bugetara — date din Data_Venituri_Cheltuieli.xlsx ──────
     with tab1:
-        st.markdown('<div class="chart-card"><div class="chart-card-title">Venituri si cheltuieli (% PIB)</div>', unsafe_allow_html=True)
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=YEARS_STR, y=venituri_pib, name="Venituri",
-            mode="lines+markers", line=dict(color="#1D9E75", width=2),
-            marker=dict(size=5), fill="tozeroy", fillcolor="rgba(29,158,117,0.06)",
-        ))
-        fig.add_trace(go.Scatter(
-            x=YEARS_STR, y=cheltuieli_pib, name="Cheltuieli",
-            mode="lines+markers", line=dict(color="#E24B4A", width=2),
-            marker=dict(size=5),
-        ))
-        fig.update_layout(
-            height=280,
-            font=dict(family="IBM Plex Sans", size=11, color="#444441"),
-            paper_bgcolor="white", plot_bgcolor="white",
-            margin=dict(l=10, r=10, t=10, b=10),
-            legend=dict(orientation="h", y=1.05, x=0, font=dict(size=10), bgcolor="rgba(0,0,0,0)"),
-            xaxis=dict(showgrid=False, linecolor="#e8e4dc", tickfont=dict(size=10)),
-            yaxis=dict(gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False, title="% PIB"),
-        )
-        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-        st.markdown('<div class="chart-source">Sursa: Ministerul Finantelor — Buget general consolidat</div></div>', unsafe_allow_html=True)
+        if vc_ok:
+            df_van  = vc["venituri"]
+            df_cean = vc["chelt_ec"]
+            ani_vc  = [a for a in vc["ani"] if a >= 2018]
+            ani_str = [str(a) + ("*" if a == vc["an_max"] and vc["partial"] else "") for a in ani_vc]
+            partial_note = f"* {vc['an_max']}: date pentru {vc['luni_max']} luni" if vc["partial"] else ""
 
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown('<div class="chart-card"><div class="chart-card-title">Sold bugetar (% PIB)</div>', unsafe_allow_html=True)
-            fig2 = bar_chart(YEARS_STR, sold_pib, "amber", ylabel="% PIB", neg_color="amber")
-            st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
-            st.markdown('<div class="chart-source">Sursa: Ministerul Finantelor</div></div>', unsafe_allow_html=True)
-        with col2:
-            st.markdown('<div class="chart-card"><div class="chart-card-title">Datorie publica totala (% PIB)</div>', unsafe_allow_html=True)
-            fig3 = go.Figure(go.Scatter(
-                x=ani_dat_str, y=dat_tot,
-                mode="lines+markers",
-                line=dict(color="#854F0B", width=2.5),
-                marker=dict(size=6, color="#854F0B"),
-                fill="tozeroy", fillcolor="rgba(133,79,11,0.07)",
-                hovertemplate="<b>%{x}</b>: %{y:.1f}% PIB<extra></extra>",
-            ))
-            fig3.add_hline(y=60, line_dash="dot", line_color="#E24B4A", line_width=1,
-                           annotation_text="Prag UE 60%", annotation_font_size=9)
-            fig3.update_layout(
-                height=280, paper_bgcolor="white", plot_bgcolor="white",
-                font=dict(family="IBM Plex Sans", size=11, color="#444441"),
-                margin=dict(l=10, r=10, t=10, b=10), showlegend=False,
-                xaxis=dict(showgrid=False, linecolor="#e8e4dc", tickfont=dict(size=10)),
-                yaxis=dict(gridcolor="#f1efe8", tickfont=dict(size=10),
-                           zeroline=False, title="% PIB"),
-            )
-            st.plotly_chart(fig3, use_container_width=True, config={"displayModeBar": False})
-            sursa_dat = "Date_Sector_Public.xlsx" if dat_ok else "date demo"
-            st.markdown(f'<div class="chart-source">Sursa: MF — {sursa_dat} · col. Datorie totală</div></div>', unsafe_allow_html=True)
+            # ── Grafic 1: Evolutia venituri si cheltuieli absolute (mil. lei) ─
+            st.markdown('<div class="chart-card"><div class="chart-card-title">Evolutia venituri si cheltuieli bugetare (mil. lei) · 2018–2025</div>', unsafe_allow_html=True)
 
+            col_tot_ven   = "Total venituri"
+            col_tot_chelt = "Total" if "Total" in df_cean.columns else next(
+                (c for c in df_cean.columns if "total" in c.lower()), None)
+
+            fig_ev = go.Figure()
+            if col_tot_ven in df_van.columns:
+                ven_vals = [df_van.loc[a, col_tot_ven] / 1000 for a in ani_vc if a in df_van.index]
+                fig_ev.add_trace(go.Scatter(
+                    x=ani_str, y=[round(v, 1) for v in ven_vals],
+                    name="Venituri totale",
+                    mode="lines+markers",
+                    line=dict(color="#1D9E75", width=2.5),
+                    marker=dict(size=6),
+                    fill="tozeroy", fillcolor="rgba(29,158,117,0.06)",
+                    hovertemplate="Venituri <b>%{x}</b>: %{y:,.1f} mld. lei<extra></extra>",
+                ))
+            if col_tot_chelt:
+                chelt_vals = [df_cean.loc[a, col_tot_chelt] / 1000 for a in ani_vc if a in df_cean.index]
+                fig_ev.add_trace(go.Scatter(
+                    x=ani_str[:len(chelt_vals)], y=[round(v, 1) for v in chelt_vals],
+                    name="Cheltuieli totale",
+                    mode="lines+markers",
+                    line=dict(color="#E24B4A", width=2.5),
+                    marker=dict(size=6),
+                    hovertemplate="Cheltuieli <b>%{x}</b>: %{y:,.1f} mld. lei<extra></extra>",
+                ))
+
+            fig_ev.update_layout(**{
+                **_layout(300),
+                "showlegend": True,
+                "yaxis": dict(gridcolor="#f1efe8", tickfont=dict(size=10),
+                              zeroline=False, title="mld. lei"),
+            })
+            st.plotly_chart(fig_ev, use_container_width=True, config={"displayModeBar": False})
+            if partial_note:
+                st.caption(partial_note)
+            # ── Grafic 2: Stacked bar venituri pe componente ──────────────────
+            st.markdown('<div class="chart-card"><div class="chart-card-title">Structura veniturilor bugetare (mil. lei) · componente</div>', unsafe_allow_html=True)
+
+            COL_VEN = [
+                ("Imp. venit fizic",   "#0D2B6B"),
+                ("Imp. venit juridic", "#1A4FA0"),
+                ("TVA local",          "#2D6EC8"),
+                ("TVA import",         "#4A87D4"),
+                ("Accize",             "#5B9BD5"),
+                ("Contrib. sociale",   "#7BB0E0"),
+                ("Prime asig. med.",   "#8CB4E1"),
+                ("Granturi",           "#B8D4EE"),
+                ("Alte venituri",      "#D9E8F7"),
+            ]
+
+            fig_vstr = go.Figure()
+            for col, color in COL_VEN:
+                if col in df_van.columns:
+                    vals = [df_van.loc[a, col] / 1000 if a in df_van.index else 0
+                            for a in ani_vc]
+                    fig_vstr.add_trace(go.Bar(
+                        name=col, x=ani_str, y=[round(v, 2) for v in vals],
+                        marker_color=color, opacity=0.92,
+                        hovertemplate=f"<b>{col}</b> %{{x}}: %{{y:,.2f}} mld. lei<extra></extra>",
+                    ))
+
+            # Linie total
+            if col_tot_ven in df_van.columns:
+                tot_v = [df_van.loc[a, col_tot_ven] / 1000 if a in df_van.index else 0
+                         for a in ani_vc]
+                fig_vstr.add_trace(go.Scatter(
+                    name="Total venituri", x=ani_str, y=[round(v, 1) for v in tot_v],
+                    mode="lines+markers+text",
+                    line=dict(color="#0D1F3C", width=2.5),
+                    marker=dict(size=5, color="#0D1F3C"),
+                    text=[f"{v:.1f}" for v in tot_v],
+                    textposition="top center",
+                    textfont=dict(size=9, color="#0D1F3C"),
+                    hovertemplate="Total <b>%{x}</b>: %{y:,.1f} mld. lei<extra></extra>",
+                ))
+
+            fig_vstr.update_layout(**{
+                **_layout(380),
+                "barmode": "stack",
+                "showlegend": True,
+                "legend": dict(orientation="h", y=-0.22, x=0,
+                               font=dict(size=9), bgcolor="rgba(0,0,0,0)"),
+                "yaxis": dict(gridcolor="#f1efe8", tickfont=dict(size=10),
+                              zeroline=False, title="mld. lei"),
+            })
+            st.plotly_chart(fig_vstr, use_container_width=True, config={"displayModeBar": False})
+            if partial_note:
+                st.caption(partial_note)
+            # ── Grafic 3: Stacked bar cheltuieli pe clasificatia economica ────
+            st.markdown('<div class="chart-card"><div class="chart-card-title">Structura cheltuielilor bugetare — clasificatie economica (mil. lei)</div>', unsafe_allow_html=True)
+
+            COL_CHELT_EC = [
+                ("Cheltuieli de personal", "#0D2B6B"),
+                ("Bunuri și servicii",     "#1A4FA0"),
+                ("Dobânzi",                "#2D6EC8"),
+                ("Subvenții",              "#4A87D4"),
+                ("Granturi acordate",      "#5B9BD5"),
+                ("Prestații sociale",      "#7BB0E0"),
+                ("Alte cheltuieli",        "#8CB4E1"),
+                ("Mijloace fixe",          "#B8D4EE"),
+                ("Stocuri de materiale",   "#CADAED"),
+            ]
+
+            fig_cstr = go.Figure()
+            for col, color in COL_CHELT_EC:
+                if col in df_cean.columns:
+                    ani_ce_ok = [a for a in ani_vc if a in df_cean.index]
+                    ani_ce_str = [str(a) + ("*" if a == vc["an_max"] and vc["partial"] else "")
+                                  for a in ani_ce_ok]
+                    vals = [max(0, df_cean.loc[a, col] / 1000) for a in ani_ce_ok]
+                    fig_cstr.add_trace(go.Bar(
+                        name=col, x=ani_ce_str, y=[round(v, 2) for v in vals],
+                        marker_color=color, opacity=0.92,
+                        hovertemplate=f"<b>{col}</b> %{{x}}: %{{y:,.2f}} mld. lei<extra></extra>",
+                    ))
+
+            # Linie total cheltuieli
+            if col_tot_chelt:
+                ani_ce_ok = [a for a in ani_vc if a in df_cean.index]
+                ani_ce_str = [str(a) + ("*" if a == vc["an_max"] and vc["partial"] else "")
+                              for a in ani_ce_ok]
+                tot_c = [df_cean.loc[a, col_tot_chelt] / 1000 for a in ani_ce_ok]
+                fig_cstr.add_trace(go.Scatter(
+                    name="Total cheltuieli", x=ani_ce_str, y=[round(v, 1) for v in tot_c],
+                    mode="lines+markers+text",
+                    line=dict(color="#0D1F3C", width=2.5),
+                    marker=dict(size=5, color="#0D1F3C"),
+                    text=[f"{v:.1f}" for v in tot_c],
+                    textposition="top center",
+                    textfont=dict(size=9, color="#0D1F3C"),
+                    hovertemplate="Total <b>%{x}</b>: %{y:,.1f} mld. lei<extra></extra>",
+                ))
+
+            fig_cstr.update_layout(**{
+                **_layout(380),
+                "barmode": "stack",
+                "showlegend": True,
+                "legend": dict(orientation="h", y=-0.22, x=0,
+                               font=dict(size=9), bgcolor="rgba(0,0,0,0)"),
+                "yaxis": dict(gridcolor="#f1efe8", tickfont=dict(size=10),
+                              zeroline=False, title="mld. lei"),
+            })
+            st.plotly_chart(fig_cstr, use_container_width=True, config={"displayModeBar": False})
+            if partial_note:
+                st.caption(partial_note)
+            # ── Grafic 4: Cheltuieli clasificatie functionala ─────────────────
+            df_fan = vc["chelt_fc"]
+            col_fn = [c for c in df_fan.columns
+                      if c not in ["Total Cheltuieli și active nefinanciare",
+                                   "Total cheltuieli conf. raportului Min Fin",
+                                   "(ocrotirea muncii)* inclusiv transferuri între instituțiile  BS "]
+                      and df_fan[c].sum() > 0]
+
+            if col_fn:
+                st.markdown('<div class="chart-card"><div class="chart-card-title">Structura cheltuielilor — clasificatie functionala (mil. lei)</div>', unsafe_allow_html=True)
+                PALETTE_FC = ["#0D2B6B","#185FA5","#2D6EC8","#1D9E75","#0F6E56",
+                              "#854F0B","#534AB7","#993556","#888780","#E24B4A"]
+                ani_fc_ok  = [a for a in ani_vc if a in df_fan.index]
+                ani_fc_str = [str(a) + ("*" if a == vc["an_max"] and vc["partial"] else "")
+                              for a in ani_fc_ok]
+                fig_fc = go.Figure()
+                for i, col in enumerate(col_fn):
+                    vals = [max(0, df_fan.loc[a, col] / 1000) if a in df_fan.index else 0
+                            for a in ani_fc_ok]
+                    fig_fc.add_trace(go.Bar(
+                        name=col[:30], x=ani_fc_str, y=[round(v, 2) for v in vals],
+                        marker_color=PALETTE_FC[i % len(PALETTE_FC)], opacity=0.88,
+                        hovertemplate=f"<b>{col[:40]}</b> %{{x}}: %{{y:,.2f}} mld. lei<extra></extra>",
+                    ))
+                fig_fc.update_layout(**{
+                    **_layout(380),
+                    "barmode": "stack",
+                    "showlegend": True,
+                    "legend": dict(orientation="h", y=-0.30, x=0,
+                                   font=dict(size=8), bgcolor="rgba(0,0,0,0)"),
+                    "yaxis": dict(gridcolor="#f1efe8", tickfont=dict(size=10),
+                                  zeroline=False, title="mld. lei"),
+                })
+                st.plotly_chart(fig_fc, use_container_width=True, config={"displayModeBar": False})
+                if partial_note:
+                    st.caption(partial_note)
+            # ── Sold bugetar ──────────────────────────────────────────────────
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown('<div class="chart-card"><div class="chart-card-title">Sold bugetar (Venituri − Cheltuieli, mld. lei)</div>', unsafe_allow_html=True)
+                if col_tot_ven in df_van.columns and col_tot_chelt:
+                    ani_sold = [a for a in ani_vc if a in df_van.index and a in df_cean.index]
+                    ani_sold_str = [str(a) + ("*" if a == vc["an_max"] and vc["partial"] else "")
+                                    for a in ani_sold]
+                    sold_vals_vc = [
+                        round((df_van.loc[a, col_tot_ven] - df_cean.loc[a, col_tot_chelt]) / 1000, 2)
+                        for a in ani_sold
+                    ]
+                    c_sold = ["#1D9E75" if v >= 0 else "#E24B4A" for v in sold_vals_vc]
+                    fig_sold = go.Figure(go.Bar(
+                        x=ani_sold_str, y=sold_vals_vc,
+                        marker_color=c_sold, opacity=0.88,
+                        text=[f"{v:+.2f}" for v in sold_vals_vc],
+                        textposition="outside",
+                        textfont=dict(size=9, color="#444441"),
+                        hovertemplate="<b>%{x}</b>: %{y:+.2f} mld. lei<extra></extra>",
+                    ))
+                    fig_sold.add_hline(y=0, line_color="#e8e4dc", line_width=1)
+                    fig_sold.update_layout(**{**_layout(260), "yaxis": dict(
+                        gridcolor="#f1efe8", tickfont=dict(size=10), title="mld. lei"
+                    )})
+                    st.plotly_chart(fig_sold, use_container_width=True, config={"displayModeBar": False})
+            with col2:
+                st.markdown('<div class="chart-card"><div class="chart-card-title">Variatie anuala venituri si cheltuieli (%)</div>', unsafe_allow_html=True)
+                if col_tot_ven in df_van.columns and col_tot_chelt:
+                    ven_ser = pd.Series(
+                        [df_van.loc[a, col_tot_ven] for a in ani_vc if a in df_van.index],
+                        index=[a for a in ani_vc if a in df_van.index]
+                    )
+                    chelt_ser = pd.Series(
+                        [df_cean.loc[a, col_tot_chelt] for a in ani_vc if a in df_cean.index],
+                        index=[a for a in ani_vc if a in df_cean.index]
+                    )
+                    var_v = ven_ser.pct_change().fillna(0) * 100
+                    var_c = chelt_ser.pct_change().fillna(0) * 100
+
+                    fig_var = go.Figure()
+                    fig_var.add_trace(go.Bar(
+                        name="Venituri", x=ani_str[:len(var_v)],
+                        y=var_v.round(1).tolist(),
+                        marker_color="#1D9E75", opacity=0.80,
+                        hovertemplate="Venituri <b>%{x}</b>: %{y:+.1f}%<extra></extra>",
+                    ))
+                    fig_var.add_trace(go.Bar(
+                        name="Cheltuieli", x=ani_str[:len(var_c)],
+                        y=var_c.round(1).tolist(),
+                        marker_color="#E24B4A", opacity=0.70,
+                        hovertemplate="Cheltuieli <b>%{x}</b>: %{y:+.1f}%<extra></extra>",
+                    ))
+                    fig_var.add_hline(y=0, line_color="#e8e4dc", line_width=1)
+                    fig_var.update_layout(**{
+                        **_layout(260),
+                        "barmode": "group",
+                        "showlegend": True,
+                        "yaxis": dict(gridcolor="#f1efe8", tickfont=dict(size=10), title="%"),
+                    })
+                    st.plotly_chart(fig_var, use_container_width=True, config={"displayModeBar": False})
+            st.markdown('<div class="chart-source">Sursa: MinFin</div></div>', unsafe_allow_html=True)
+
+        else:
+            st.warning(f"Data_Venituri_Cheltuieli.xlsx indisponibil: {vc.get('eroare','')}") 
+
+    # ── Tab 2: Structura BPN ──────────────────────────────────────────────────
+    with tab2:
         if not bpn_ok:
             st.warning(f"Date_Public_BPN.xlsx indisponibil: {bpn.get('eroare','')}")
         else:
@@ -276,7 +557,7 @@ def render():
                 tbl_v.map(lambda x: f"{x:.1f}%").reset_index(),
                 use_container_width=True, hide_index=True,
             )
-            st.markdown('<div class="chart-source">Sursa: MinFin</div></div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-source">Sursa: MinFin </div></div>', unsafe_allow_html=True)
 
             st.markdown("")
 
@@ -335,10 +616,10 @@ def render():
                 tbl_c.map(lambda x: f"{x:.1f}%").reset_index(),
                 use_container_width=True, hide_index=True,
             )
-            st.markdown('<div class="chart-source">Sursa: MF — Date_Public_BPN.xlsx · sheet Cheltuieli</div></div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-source">Sursa: MinFin</div></div>', unsafe_allow_html=True)
 
     # ── Tab 3: Datorie publica ────────────────────────────────────────────────
-    with tab2:
+    with tab3:
         col1, col2 = st.columns(2)
 
         with col1:
@@ -372,8 +653,8 @@ def render():
                     hovertemplate="Interna <b>%{x}</b>: %{y:.1f}%<extra></extra>",
                 ))
 
-            fig_dat.add_hline(y=60, line_dash="dot", line_color="#E24B4A", line_width=1,
-                              annotation_text="Prag UE 60%", annotation_font_size=9)
+            # fig_dat.add_hline(y=60, line_dash="dot", line_color="#E24B4A", line_width=1,
+            #                   annotation_text="Prag UE 60%", annotation_font_size=9)
             fig_dat.update_layout(
                 height=280, paper_bgcolor="white", plot_bgcolor="white",
                 font=dict(family="IBM Plex Sans", size=11, color="#444441"),
@@ -407,8 +688,8 @@ def render():
                     hovertemplate="<b>%{x}</b>: %{y:.1f}% PIB<extra></extra>",
                 ))
                 fig_def.add_hline(y=0, line_color="#e8e4dc", line_width=1)
-                fig_def.add_hline(y=-3.0, line_dash="dot", line_color="#BA7517", line_width=1,
-                                  annotation_text="Prag -3% PIB", annotation_font_size=9)
+                # fig_def.add_hline(y=-3.0, line_dash="dot", line_color="#BA7517", line_width=1,
+                #                   annotation_text="Prag -3% PIB", annotation_font_size=9)
                 fig_def.update_layout(
                     height=280, paper_bgcolor="white", plot_bgcolor="white",
                     font=dict(family="IBM Plex Sans", size=11, color="#444441"),
@@ -453,4 +734,4 @@ def render():
                 "2025": ["34.2%", "38.3%", "-4.1%", "37.6%"],
             })
         st.dataframe(fis_tbl, use_container_width=True, hide_index=True)
-        st.markdown('<div class="chart-source">Sursa: MF — Date_Public_BPN.xlsx + Date_Sector_Public.xlsx</div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-source">Sursa: MinFin</div></div>', unsafe_allow_html=True)

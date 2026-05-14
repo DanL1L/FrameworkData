@@ -4,7 +4,7 @@ Date trimestriale: data/Date_Sector_Social.xlsx  (excel_loader.load_social)
 Date anuale:       BNS API via utils/api_social.py
   - Castig salarial mediu: saved query 61bba808-4c00-4a35-9c0d-946caaa33cb8
   - Rata activitate/ocupare/somaj: saved query 08546b68-0d6b-4746-9623-1c5c50916b8f
-  - Populatie ocupata si someri: saved query ef9f71d7-a859-4d5d-9c03-1cf128ff9616
+  - Populatie ocupata pe gen (barbati/femei/total): saved query ef9f71d7-a859-4d5d-9c03-1cf128ff9616
 """
 
 import streamlit as st
@@ -18,14 +18,15 @@ from utils.api_social import (
     get_salarii_anual,
     get_piata_muncii_anual,
     get_populatie_someri_anual,
+    get_populatie_gen_anual,
 )
 
 
 def render():
     page_header(
         "Sectorul Social",
-        "Piata muncii, somaj, ocupare, salarii · trimestrial & anual",
-        "BNS — Date_Sector_Social.xlsx · PX-Web API",
+        "Piata muncii, somaj, ocupare, salarii · trimestrial / anual",
+        "BNS",
         "teal"
     )
 
@@ -37,10 +38,24 @@ def render():
     result_sal = get_salarii_anual()
     result_pm  = get_piata_muncii_anual()
     result_pop = get_populatie_someri_anual()
+    result_gen = get_populatie_gen_anual()
     df_sal     = result_sal["data"]
     df_pm      = result_pm["data"]
     df_pop     = result_pop["data"]
+    df_gen     = result_gen["data"]
 
+    # # ── Badge surse ───────────────────────────────────────────────────────────
+    # col_b1, col_b2 = st.columns(2)
+    # with col_b1:
+    #     st.markdown(sursa_badge(result_q), unsafe_allow_html=True)
+    # with col_b2:
+    #     sal_live = result_sal["live"] or result_pm["live"]
+    #     badge_api = {
+    #         "live":  sal_live,
+    #         "sursa": "BNS PX-Web API — date anuale",
+    #     }
+    #     st.markdown(sursa_badge(badge_api), unsafe_allow_html=True)
+    # st.markdown("")
 
     # ── KPI — din trimestrale (ultimul trimestru disponibil) ──────────────────
     if not df_q.empty:
@@ -179,74 +194,158 @@ def render():
                                   zeroline=False, title="MDL"),
                 })
                 st.plotly_chart(fig_ss, use_container_width=True, config={"displayModeBar": False})
-
         else:
             st.info("Date salariale BNS indisponibile — se afiseaza fallback.")
 
         ts_sal = result_sal.get("ts","")
-        live_sal = "live" if result_sal["live"] else "fallback"
-        st.markdown(f'<div class="chart-source">Sursa: {result_sal["sursa"]} ({live_sal}) · actualizat: {ts_sal}</div></div>', unsafe_allow_html=True)
+        live_sal = "live" if result_sal["live"] else " "
+       
 
         st.markdown("")
 
         # ── Piata muncii anuala ───────────────────────────────────────────────
-        st.markdown('<div class="chart-card"><div class="chart-card-title">Rata de activitate, ocupare si somaj (%)</div>', unsafe_allow_html=True)
-
         if not df_pm.empty:
             ani_pm = df_pm["an"].astype(str).tolist()
 
             col3, col4 = st.columns(2)
 
             with col3:
-                # Rate activitate + ocupare (line)
+
+                st.markdown(
+                    '<div class="chart-card-title">Rata de activitate și ocupare (%)</div>',
+                    unsafe_allow_html=True
+                )
+                # ── Rate activitate + ocupare ──────────────────────────────────────
                 fig_pm1 = go.Figure()
                 for col, name, color in [
+
                     ("rata_activitate", "Rata activitate", "#185FA5"),
                     ("rata_ocupare",    "Rata ocupare",    "#1D9E75"),
                 ]:
                     if col in df_pm.columns:
                         fig_pm1.add_trace(go.Scatter(
-                            x=ani_pm, y=df_pm[col].tolist(),
-                            name=name, mode="lines+markers",
-                            line=dict(color=color, width=2.5),
-                            marker=dict(size=6),
+                            x=ani_pm,
+                            y=df_pm[col].tolist(),
+                            name=name,
+                            mode="lines+markers",
+                            line=dict(
+                                color=color,
+                                width=2.5
+                            ),
+                            marker=dict(
+                                size=6
+                            ),
                             hovertemplate=f"<b>{name}</b> %{{x}}: %{{y:.1f}}%<extra></extra>",
                         ))
-                fig_pm1.update_layout(**{
-                    **_layout_an(),
-                    "showlegend": True,
-                    "legend": dict(orientation="h", y=1.05, x=0,
-                                   font=dict(size=10), bgcolor="rgba(0,0,0,0)"),
-                    "yaxis": dict(gridcolor="#f1efe8", tickfont=dict(size=10),
-                                  zeroline=False, title="%"),
-                })
-                st.plotly_chart(fig_pm1, use_container_width=True, config={"displayModeBar": False})
 
+                fig_pm1.update_layout(
+
+                    **{
+                        **_layout_an(340),
+
+                        "margin": dict(
+                            l=10,
+                            r=10,
+                            t=10,
+                            b=70
+                        ),
+                        "showlegend": True,
+                        "legend": dict(
+                            orientation="h",
+                            y=-0.22,
+                            x=0,
+                            xanchor="left",
+                            yanchor="top",
+                            font=dict(size=10),
+                            bgcolor="rgba(0,0,0,0)",
+                        ),
+
+                        "xaxis": dict(
+                            showgrid=False,
+                            linecolor="#e8e4dc",
+                            tickfont=dict(size=10),
+                        ),
+                        "yaxis": dict(
+
+                            gridcolor="#f1efe8",
+                            tickfont=dict(size=10),
+                            zeroline=False,
+                            title="%",
+                            ticksuffix="%"
+                        ),
+                    }
+                )
+                st.plotly_chart(
+                    fig_pm1,
+                    use_container_width=True,
+                    config={"displayModeBar": False}
+                )
             with col4:
-                # Rata somaj (bar bicolor)
+                st.markdown(
+                    '<div class="chart-card-title">Rata șomajului (%)</div>',
+                    unsafe_allow_html=True
+                )
+                # ── Rata somaj ─────────────────────────────────────────────────────
                 if "rata_somaj" in df_pm.columns:
                     somaj_vals = df_pm["rata_somaj"].tolist()
                     media_somaj = sum(somaj_vals) / len(somaj_vals)
-                    colors_som = ["#E24B4A" if v > media_somaj else "#0F6E56"
-                                  for v in somaj_vals]
+                    colors_som = [
+                        "#E24B4A" if v > media_somaj else "#0F6E56"
+                        for v in somaj_vals
+                    ]
                     fig_pm2 = go.Figure(go.Bar(
-                        x=ani_pm, y=somaj_vals,
-                        marker_color=colors_som, opacity=0.88,
+                        x=ani_pm,
+                        y=somaj_vals,
+                        marker_color=colors_som,
+                        opacity=0.88,
                         text=[f"{v:.1f}%" for v in somaj_vals],
                         textposition="outside",
-                        textfont=dict(size=9, color="#444441"),
-                        hovertemplate="<b>%{x}</b>: rata somaj %{y:.1f}%<extra></extra>",
+                        textfont=dict(
+                            size=9,
+                            color="#444441"
+                        ),
+                        hovertemplate="<b>%{x}</b>: rata șomaj %{y:.1f}%<extra></extra>",
                     ))
+                    # ── Linie medie ────────────────────────────────────────────────
                     fig_pm2.add_hline(
-                        y=media_somaj, line_dash="dot",
-                        line_color="#888780", line_width=1,
+                        y=media_somaj,
+                        line_dash="dot",
+                        line_color="#888780",
+                        line_width=1,
                         annotation_text=f"Media: {media_somaj:.1f}%",
                         annotation_font_size=9,
                     )
-                    fig_pm2.update_layout(**{**_layout_an(), "yaxis": dict(
-                        gridcolor="#f1efe8", tickfont=dict(size=10), title="%"
-                    )})
-                    st.plotly_chart(fig_pm2, use_container_width=True, config={"displayModeBar": False})
+                    # ── Layout ─────────────────────────────────────────────────────
+                    fig_pm2.update_layout(
+
+                        **{
+                            **_layout_an(340),
+                            "margin": dict(
+                                l=10,
+                                r=10,
+                                t=10,
+                                b=70
+                            ),
+                            "xaxis": dict(
+                                showgrid=False,
+                                linecolor="#e8e4dc",
+                                tickfont=dict(size=10),
+                            ),
+
+                            "yaxis": dict(
+                                gridcolor="#f1efe8",
+                                tickfont=dict(size=10),
+                                zeroline=False,
+                                title="%",
+                                ticksuffix="%"
+                            ),
+                        }
+                    )
+                    st.plotly_chart(
+                        fig_pm2,
+                        use_container_width=True,
+                        config={"displayModeBar": False}
+                    )
 
             # Tabel anual piata muncii
             cols_show_pm = {
@@ -267,200 +366,266 @@ def render():
 
         ts_pm = result_pm.get("ts","")
         live_pm = "live" if result_pm["live"] else "fallback"
-        st.markdown(f'<div class="chart-source">Sursa: {result_pm["sursa"]} ({live_pm}) · actualizat: {ts_pm}</div></div>', unsafe_allow_html=True)
+        # st.markdown(f'<div class="chart-source">Sursa: {result_pm["sursa"]} ({live_pm}) · actualizat: {ts_pm}</div></div>', unsafe_allow_html=True)
 
         st.markdown("")
 
-        # ── Populatie ocupata si someri ───────────────────────────────────────
-        if not df_pop.empty:
-            ani_pop   = df_pop["an"].astype(str).tolist()
-            has_occ   = "pop_ocupata_mii" in df_pop.columns
-            has_som   = "someri_mii" in df_pop.columns
+        # ── Populatie ocupata pe gen — stacked bar barbati/femei + linie total ─
+        # Folosim df_gen (barbati/femei/total) daca e disponibil, altfel df_pop
+        df_occ = df_gen if not df_gen.empty and "barbati" in df_gen.columns else df_pop
+        sursa_gen = result_gen if not df_gen.empty else result_pop
 
+        if not df_occ.empty:
+            ani_occ  = df_occ["an"].astype(str).tolist()
+            has_b    = "barbati" in df_occ.columns
+            has_f    = "femei"   in df_occ.columns
+            has_tot  = "total"   in df_occ.columns
+            # fallback total daca lipseste
+            if not has_tot and has_b and has_f:
+                df_occ = df_occ.copy()
+                df_occ["total"] = df_occ["barbati"] + df_occ["femei"]
+                has_tot = True
             col5, col6 = st.columns(2)
             with col5:
                 st.markdown(
                     '<div class="chart-card-title">Populația ocupată (mii persoane)</div>',
                     unsafe_allow_html=True
                 )
-                # Populatie ocupata — bar
-                if has_occ:
-                    occ_vals = df_pop["pop_ocupata_mii"].tolist()
-
-                    fig_occ = go.Figure(go.Bar(
-                        x=ani_pop,
-                        y=occ_vals,
-                        marker_color="#0F6E56",
+                # ── Stacked bar Barbati + Femei + linie Total ─────────────────────
+                fig_gen = go.Figure()
+                if has_b:
+                    fig_gen.add_trace(go.Bar(
+                        name="Bărbați",
+                        x=ani_occ,
+                        y=df_occ["barbati"].round(1).tolist(),
+                        marker_color="#185FA5",
                         opacity=0.88,
-
-                        text=[f"{v:,.1f}" for v in occ_vals],
-                        textposition="outside",
-                        textfont=dict(size=9, color="#444441"),
-
-                        hovertemplate="<b>%{x}</b>: %{y:,.1f} mii persoane<extra></extra>",
+                        hovertemplate="Bărbați <b>%{x}</b>: %{y:,.1f} mii<extra></extra>",
                     ))
-                    # Linie medie
-                    media_occ = sum(occ_vals) / len(occ_vals)
-                    fig_occ.add_hline(
-                        y=media_occ,
-                        line_dash="dot",
-                        line_color="#888780",
-                        line_width=1,
-
-                        annotation_text=f"Media: {media_occ:,.1f} mii",
-                        annotation_font_size=9,
-                    )
-                    fig_occ.update_layout(
-                        **{
-                            **_layout_an(320),
-
-                            "xaxis": dict(
-                                showgrid=False,
-                                linecolor="#e8e4dc",
-                                tickfont=dict(size=10),
-                            ),
-
-                            "yaxis": dict(
-                                gridcolor="#f1efe8",
-                                tickfont=dict(size=10),
-                                zeroline=False,
-                                title="mii persoane",
-                                range=[0, max(occ_vals) * 1.15],
-                            ),
-                        }
-                    )
-                    st.plotly_chart(
-                        fig_occ,
-                        use_container_width=True,
-                        config={"displayModeBar": False}
-                    )
-                else:
-                    st.info("Coloana 'pop_ocupata_mii' indisponibilă.")
+                if has_f:
+                    fig_gen.add_trace(go.Bar(
+                        name="Femei",
+                        x=ani_occ,
+                        y=df_occ["femei"].round(1).tolist(),
+                        marker_color="#993556",
+                        opacity=0.88,
+                        hovertemplate="Femei <b>%{x}</b>: %{y:,.1f} mii<extra></extra>",
+                    ))
+                if has_tot:
+                    tot_vals = df_occ["total"].round(1).tolist()
+                    fig_gen.add_trace(go.Scatter(
+                        name="Total",
+                        x=ani_occ,
+                        y=tot_vals,
+                        mode="lines+markers+text",
+                        line=dict(
+                            color="#0D1F3C",
+                            width=2.5
+                        ),
+                        marker=dict(
+                            size=5,
+                            color="#0D1F3C"
+                        ),
+                        text=[f"{v:,.1f}" for v in tot_vals],
+                        textposition="top center",
+                        textfont=dict(
+                            size=8,
+                            color="#0D1F3C"
+                        ),
+                        hovertemplate="Total <b>%{x}</b>: %{y:,.1f} mii<extra></extra>",
+                    ))
+                y_max = max(df_occ["total"].tolist()) if has_tot else (
+                    max(df_occ.get("barbati", pd.Series([900])).tolist()) * 2
+                )
+                fig_gen.update_layout(
+                    **{
+                        **_layout_an(340),
+                        "margin": dict(
+                            l=10,
+                            r=10,
+                            t=10,
+                            b=70
+                        ),
+                        "barmode": "stack",
+                        "showlegend": True,
+                        "legend": dict(
+                            orientation="h",
+                            y=-0.22,
+                            x=0,
+                            xanchor="left",
+                            yanchor="top",
+                            font=dict(size=10),
+                            bgcolor="rgba(0,0,0,0)",
+                        ),
+                        "xaxis": dict(
+                            showgrid=False,
+                            linecolor="#e8e4dc",
+                            tickfont=dict(size=10),
+                        ),
+                        "yaxis": dict(
+                            gridcolor="#f1efe8",
+                            tickfont=dict(size=10),
+                            zeroline=False,
+                            title="mii persoane",
+                            range=[0, y_max * 1.18],
+                        ),
+                    }
+                )
+                st.plotly_chart(
+                    fig_gen,
+                    use_container_width=True,
+                    config={"displayModeBar": False}
+                )
             with col6:
-               with col6:
                 st.markdown(
-                    '<div class="chart-card-title">Numărul șomerilor (mii persoane)</div>',
+                    '<div class="chart-card-title">Structura populației ocupate pe sex (%)</div>',
                     unsafe_allow_html=True
                 )
+                # ── Structura procentuala barbati vs femei ────────────────────────
+                if has_b and has_f:
 
-                # Someri — bar
-                if has_som:
-                    som_vals = df_pop["someri_mii"].tolist()
-                    media_som = sum(som_vals) / len(som_vals)
-                    colors_som = [
-                        "#E24B4A" if v > media_som else "#0F6E56"
-                        for v in som_vals
+                    b_vals = df_occ["barbati"].tolist()
+                    f_vals = df_occ["femei"].tolist()
+
+                    tot_bf = [b + f for b, f in zip(b_vals, f_vals)]
+
+                    b_pct = [
+                        b / t * 100 if t else 0
+                        for b, t in zip(b_vals, tot_bf)
                     ]
-                    fig_som = go.Figure(go.Bar(
-                        x=ani_pop,
-                        y=som_vals,
-
-                        marker_color=colors_som,
+                    f_pct = [
+                        f / t * 100 if t else 0
+                        for f, t in zip(f_vals, tot_bf)
+                    ]
+                    fig_pct = go.Figure()
+                    fig_pct.add_trace(go.Bar(
+                        name="Bărbați (%)",
+                        x=ani_occ,
+                        y=[round(v, 1) for v in b_pct],
+                        marker_color="#185FA5",
                         opacity=0.88,
-
-                        text=[f"{v:,.1f}" for v in som_vals],
-                        textposition="outside",
-                        textfont=dict(size=9, color="#444441"),
-
-                        hovertemplate="<b>%{x}</b>: %{y:,.1f} mii șomeri<extra></extra>",
+                        text=[f"{v:.1f}%" for v in b_pct],
+                        textposition="inside",
+                        textfont=dict(
+                            size=9,
+                            color="white"
+                        ),
+                        hovertemplate="Bărbați <b>%{x}</b>: %{y:.1f}%<extra></extra>",
                     ))
-                    fig_som.add_hline(
-                        y=media_som,
-                        line_dash="dot",
-                        line_color="#888780",
-                        line_width=1,
 
-                        annotation_text=f"Media: {media_som:.1f} mii",
-                        annotation_font_size=9,
-                    )
-                    fig_som.update_layout(
+                    fig_pct.add_trace(go.Bar(
+                        name="Femei (%)",
+                        x=ani_occ,
+                        y=[round(v, 1) for v in f_pct],
+                        marker_color="#993556",
+                        opacity=0.88,
+                        text=[f"{v:.1f}%" for v in f_pct],
+                        textposition="inside",
+                        textfont=dict(
+                            size=9,
+                            color="white"
+                        ),
+                        hovertemplate="Femei <b>%{x}</b>: %{y:.1f}%<extra></extra>",
+                    ))
+                    fig_pct.update_layout(
                         **{
-                            **_layout_an(320),
-
+                            **_layout_an(340),
+                            "margin": dict(
+                                l=10,
+                                r=10,
+                                t=10,
+                                b=70
+                            ),
+                            "barmode": "stack",
+                            "showlegend": True,
+                            "legend": dict(
+                                orientation="h",
+                                y=-0.22,
+                                x=0,
+                                xanchor="left",
+                                yanchor="top",
+                                font=dict(size=10),
+                                bgcolor="rgba(0,0,0,0)",
+                            ),
                             "xaxis": dict(
                                 showgrid=False,
                                 linecolor="#e8e4dc",
                                 tickfont=dict(size=10),
                             ),
-
                             "yaxis": dict(
                                 gridcolor="#f1efe8",
                                 tickfont=dict(size=10),
                                 zeroline=False,
-                                title="mii persoane",
-                                range=[0, max(som_vals) * 1.18],
+                                title="%",
+                                ticksuffix="%",
+                                range=[0, 100],
                             ),
                         }
                     )
                     st.plotly_chart(
-                        fig_som,
+                        fig_pct,
                         use_container_width=True,
                         config={"displayModeBar": False}
                     )
                 else:
-                    st.info("Coloana 'someri_mii' indisponibilă.")
-            # Variatie % an/an pentru ambele serii
-            if has_occ and has_som:
-                occ_s  = pd.Series(df_pop["pop_ocupata_mii"].tolist())
-                som_s  = pd.Series(df_pop["someri_mii"].tolist())
-                var_occ = occ_s.pct_change().fillna(0) * 100
-                var_som = som_s.pct_change().fillna(0) * 100
+                    st.info("Date pe gen indisponibile pentru structura procentuală.")
+        #     # ── Tabel sinteza barbati / femei / total ─────────────────────────
+        #     tbl_cols = {c: c for c in ["an","barbati","femei","total"]
+        #                 if c in df_occ.columns}
+        #     tbl_gen = df_occ[list(tbl_cols)].copy()
+        #     tbl_gen = tbl_gen.rename(columns={
+        #         "an": "An", "barbati": "Bărbați (mii)",
+        #         "femei": "Femei (mii)", "total": "Total (mii)",
+        #     })
+        #     tbl_gen["An"] = tbl_gen["An"].astype(int)
+        #     for col in tbl_gen.columns:
+        #         if col != "An":
+        #             tbl_gen[col] = tbl_gen[col].apply(
+        #                 lambda x: f"{x:,.1f}" if pd.notna(x) else ""
+        #             )
+        #     st.dataframe(tbl_gen, use_container_width=True, hide_index=True)
 
-                st.markdown('<div style="margin-top:10px"><b style="font-size:12px;color:#444441">Variatie an/an (%)</b></div>', unsafe_allow_html=True)
-                col7, col8 = st.columns(2)
+        # else:
+        #     st.info("Date populatie ocupata pe gen BNS indisponibile.")
 
-                with col7:
-                    c_occ = ["#1D9E75" if v >= 0 else "#E24B4A" for v in var_occ]
-                    fig_vo = go.Figure(go.Bar(
-                        x=ani_pop, y=var_occ.round(1).tolist(),
-                        marker_color=c_occ, opacity=0.85,
-                        hovertemplate="Pop. ocupata <b>%{x}</b>: %{y:+.1f}%<extra></extra>",
-                        name="Pop. ocupata",
-                    ))
-                    fig_vo.add_hline(y=0, line_color="#e8e4dc", line_width=1)
-                    fig_vo.update_layout(**{**_layout_an(220), "yaxis": dict(
-                        gridcolor="#f1efe8", tickfont=dict(size=10), title="%"
-                    )})
-                    st.plotly_chart(fig_vo, use_container_width=True, config={"displayModeBar": False})
+        # ts_gen  = sursa_gen.get("ts","") if not df_gen.empty else result_pop.get("ts","")
+        # live_g  = "live" if sursa_gen.get("live") else "fallback"
+        # st.markdown(f'<div class="chart-source">Sursa: {sursa_gen.get("sursa","")} ({live_g}) · actualizat: {ts_gen} · saved query ef9f71d7</div></div>', unsafe_allow_html=True)
 
-                with col8:
-                    c_som = ["#E24B4A" if v >= 0 else "#1D9E75" for v in var_som]
-                    fig_vs = go.Figure(go.Bar(
-                        x=ani_pop, y=var_som.round(1).tolist(),
-                        marker_color=c_som, opacity=0.85,
-                        hovertemplate="Someri <b>%{x}</b>: %{y:+.1f}%<extra></extra>",
-                        name="Someri",
-                    ))
-                    fig_vs.add_hline(y=0, line_color="#e8e4dc", line_width=1)
-                    fig_vs.update_layout(**{**_layout_an(220), "yaxis": dict(
-                        gridcolor="#f1efe8", tickfont=dict(size=10), title="%"
-                    )})
-                    st.plotly_chart(fig_vs, use_container_width=True, config={"displayModeBar": False})
+        # st.markdown("")
 
-            # Tabel sinteza
-            cols_pop = {c: c for c in ["an","pop_ocupata_mii","someri_mii"]
-                        if c in df_pop.columns}
-            tbl_pop = df_pop[list(cols_pop)].copy()
-            tbl_pop = tbl_pop.rename(columns={
-                "an": "An",
-                "pop_ocupata_mii": "Pop. ocupata (mii)",
-                "someri_mii": "Someri (mii)",
-            })
-            tbl_pop["An"] = tbl_pop["An"].astype(int)
-            for col in tbl_pop.columns:
-                if col != "An":
-                    tbl_pop[col] = tbl_pop[col].apply(
-                        lambda x: f"{x:,.1f}" if pd.notna(x) else ""
-                    )
-            st.dataframe(tbl_pop, use_container_width=True, hide_index=True)
-
+        # ── Someri — bar bicolor fata de medie ───────────────────────────────
+        st.markdown('<div class="chart-card"><div class="chart-card-title">Numarul somerilor (mii persoane) · date anuale</div>', unsafe_allow_html=True)
+        if not df_pop.empty and "someri_mii" in df_pop.columns:
+            ani_som   = df_pop["an"].astype(str).tolist()
+            som_vals  = df_pop["someri_mii"].tolist()
+            media_som = sum(som_vals) / len(som_vals)
+            colors_sm = ["#E24B4A" if v > media_som else "#0F6E56" for v in som_vals]
+            fig_som = go.Figure(go.Bar(
+                x=ani_som, y=som_vals,
+                marker_color=colors_sm, opacity=0.85,
+                text=[f"{v:,.1f}" for v in som_vals],
+                textposition="outside",
+                textfont=dict(size=9, color="#444441"),
+                hovertemplate="<b>%{x}</b>: %{y:,.1f} mii someri<extra></extra>",
+            ))
+            fig_som.add_hline(
+                y=media_som, line_dash="dot",
+                line_color="#888780", line_width=1,
+                annotation_text=f"Media: {media_som:.1f} mii",
+                annotation_font_size=9,
+            )
+            fig_som.update_layout(**{**_layout_an(260), "yaxis": dict(
+                gridcolor="#f1efe8", tickfont=dict(size=10),
+                zeroline=False, title="mii persoane",
+                range=[0, max(som_vals) * 1.18],
+            )})
+            st.plotly_chart(fig_som, use_container_width=True, config={"displayModeBar": False})
         else:
-            st.info("Date populatie/someri BNS indisponibile.")
-
+            st.info("Date someri BNS indisponibile.")
         ts_pop  = result_pop.get("ts","")
         live_pop = "live" if result_pop["live"] else "fallback"
-        st.markdown(f'<div class="chart-source">Sursa: {result_pop["sursa"]} ({live_pop}) · actualizat: {ts_pop}</div></div>', unsafe_allow_html=True)
-
+        # st.markdown(f'<div class="chart-source">Sursa: {result_pop["sursa"]} ({live_pop}) · actualizat: {ts_pop}</div></div>', unsafe_allow_html=True)
     # ─────────────────────────────────────────────────────────────────────────
     # TAB 2 — DATE TRIMESTRIALE DIN EXCEL
     # ─────────────────────────────────────────────────────────────────────────
@@ -470,7 +635,6 @@ def render():
         else:
             LABELS = (df_q["trim_label"].tolist() if "trim_label" in df_q.columns
                       else [str(int(a)) for a in df_q["an"]])
-
             def _layout_q(h=280):
                 return dict(
                     height=h, paper_bgcolor="white", plot_bgcolor="white",
@@ -481,9 +645,7 @@ def render():
                                tickangle=-45 if len(LABELS) > 12 else 0),
                     yaxis=dict(gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False),
                 )
-
             col1, col2 = st.columns(2)
-
             with col1:
                 st.markdown('<div class="chart-card"><div class="chart-card-title">Rata somajului trimestrial (%)</div>', unsafe_allow_html=True)
                 if "rata_somaj_pct" in df_q.columns:
@@ -507,8 +669,6 @@ def render():
                         zeroline=False, title="%"
                     )})
                     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-                st.markdown('<div class="chart-source">Sursa: BNS — Date_Sector_Social.xlsx</div></div>', unsafe_allow_html=True)
-
             with col2:
                 st.markdown('<div class="chart-card"><div class="chart-card-title">Populatia ocupata trimestrial (mii persoane)</div>', unsafe_allow_html=True)
                 if "populatie_ocupata_mii" in df_q.columns:
@@ -523,8 +683,6 @@ def render():
                         zeroline=False, title="mii pers."
                     )})
                     st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
-                st.markdown('<div class="chart-source">Sursa: BNS</div></div>', unsafe_allow_html=True)
-
             st.markdown('<div class="chart-card"><div class="chart-card-title">Numarul somerilor trimestrial (mii persoane)</div>', unsafe_allow_html=True)
             if "nr_someri_mii" in df_q.columns:
                 vals3 = df_q["nr_someri_mii"].tolist()
@@ -546,10 +704,7 @@ def render():
                     zeroline=False, title="mii pers."
                 )})
                 st.plotly_chart(fig3, use_container_width=True, config={"displayModeBar": False})
-            st.markdown('<div class="chart-source">Sursa: BNS</div></div>', unsafe_allow_html=True)
-
             col3, col4 = st.columns(2)
-
             with col3:
                 st.markdown('<div class="chart-card"><div class="chart-card-title">Castigul mediu salarial trimestrial (MDL)</div>', unsafe_allow_html=True)
                 if "salariu_mediu_mdl" in df_q.columns:
@@ -566,8 +721,6 @@ def render():
                         zeroline=False, title="MDL"
                     )})
                     st.plotly_chart(fig4, use_container_width=True, config={"displayModeBar": False})
-                st.markdown('<div class="chart-source">Sursa: BNS</div></div>', unsafe_allow_html=True)
-
             with col4:
                 st.markdown('<div class="chart-card"><div class="chart-card-title">Salariu mediu — variatie an/an (%)</div>', unsafe_allow_html=True)
                 if "salariu_mediu_mdl" in df_q.columns:
@@ -589,8 +742,6 @@ def render():
                         gridcolor="#f1efe8", tickfont=dict(size=10), title="%"
                     )})
                     st.plotly_chart(fig5, use_container_width=True, config={"displayModeBar": False})
-                st.markdown('<div class="chart-source">Calcule: BNS</div></div>', unsafe_allow_html=True)
-
     # ─────────────────────────────────────────────────────────────────────────
     # TAB 3 — TABEL DATE COMPLETE
     # ─────────────────────────────────────────────────────────────────────────
@@ -598,7 +749,7 @@ def render():
         col_t1, col_t2 = st.columns(2)
 
         with col_t1:
-            st.markdown('<div class="chart-card"><div class="chart-card-title">Date trimestriale — Excel</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-card"><div class="chart-card-title">Date trimestriale</div>', unsafe_allow_html=True)
             if not df_q.empty:
                 col_rename = {
                     "an": "An", "trimestru": "Trim.",
@@ -621,7 +772,7 @@ def render():
             st.markdown('<div class="chart-source">Sursa: BNS</div></div>', unsafe_allow_html=True)
 
         with col_t2:
-            st.markdown('<div class="chart-card"><div class="chart-card-title">Date anuale — BNS API</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-card"><div class="chart-card-title">Date anuale</div>', unsafe_allow_html=True)
 
             # Combinam salarii + piata muncii pe an
             dfs_an = []
@@ -654,9 +805,14 @@ def render():
                 st.dataframe(df_an_tbl, use_container_width=True, hide_index=True, height=380)
             else:
                 st.info("Date anuale indisponibile.")
+
+            live_str = "live" if (result_sal["live"] or result_pm["live"]) else "fallback"
+            st.markdown(f'<div class="chart-source">Sursa: BNS </div></div>', unsafe_allow_html=True)
+
+    st.markdown("---")
     st.markdown(
         '<p style="font-size:10px;color:#b4b2a9;font-family:IBM Plex Mono,monospace">'
-        'Date trimestriale/anuale: BNS·'
+        f'Sursa date : BNS · actualizat: {ts_sal} ·'
         'Platforma MEDD — Directia Analiza si Prognoza Macroeconomica.</p>',
         unsafe_allow_html=True
     )
