@@ -216,7 +216,7 @@ def render():
             gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False, title="mld. USD"
         )})
         st.plotly_chart(fig1, use_container_width=True, config={"displayModeBar": False})
-        st.markdown(f'<div class="chart-source">Sursa: {sursa_lbl}</div></div>', unsafe_allow_html=True)
+        # st.markdown(f'<div class="chart-source">Sursa: {sursa_lbl}</div></div>', unsafe_allow_html=True)
 
     with col2:
         st.markdown('<div class="chart-card"><div class="chart-card-title">PIB pe locuitor, preturi curente (USD)</div>', unsafe_allow_html=True)
@@ -233,7 +233,7 @@ def render():
             gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False, title="USD"
         )})
         st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
-        st.markdown(f'<div class="chart-source">Sursa: {sursa_lbl}</div></div>', unsafe_allow_html=True)
+        # st.markdown(f'<div class="chart-source">Sursa: {sursa_lbl}</div></div>', unsafe_allow_html=True)
 
     col3, col4 = st.columns(2)
 
@@ -260,7 +260,7 @@ def render():
             title="%", range=[0, max(ipc_vals) * 1.15]
         )})
         st.plotly_chart(fig3, use_container_width=True, config={"displayModeBar": False})
-        st.markdown(f'<div class="chart-source">Sursa: {sursa_lbl}</div></div>', unsafe_allow_html=True)
+        # st.markdown(f'<div class="chart-source">Sursa: {sursa_lbl}</div></div>', unsafe_allow_html=True)
 
     with col4:
         st.markdown('<div class="chart-card"><div class="chart-card-title">Export vs Import (mil. USD)</div>', unsafe_allow_html=True)
@@ -283,7 +283,7 @@ def render():
                            font=dict(size=10), bgcolor="rgba(0,0,0,0)"),
         })
         st.plotly_chart(fig4, use_container_width=True, config={"displayModeBar": False})
-        st.markdown('<div class="chart-source">Sursa: BNM — Balanta de plati</div></div>', unsafe_allow_html=True)
+        # st.markdown('<div class="chart-source">Sursa: BNM — Balanta de plati</div></div>', unsafe_allow_html=True)
 
     st.markdown("---")
     ts_scraper = result_kpi.get("ts", "")
