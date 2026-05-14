@@ -667,7 +667,7 @@ def render():
             )
             st.plotly_chart(fig_dat, use_container_width=True, config={"displayModeBar": False})
             sursa_dat = "Date_Sector_Public.xlsx · col. Datorie totală" if dat_ok else "date demo"
-            st.markdown(f'<div class="chart-source">Sursa: MF — {sursa_dat}</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="chart-source">Sursa: MinFin </div></div>', unsafe_allow_html=True)
 
         with col2:
             # Deficit BPN din Date_Public_BPN.xlsx
@@ -699,7 +699,7 @@ def render():
                                zeroline=False, title="% PIB"),
                 )
                 st.plotly_chart(fig_def, use_container_width=True, config={"displayModeBar": False})
-                st.markdown('<div class="chart-source">Sursa: MF — Date_Public_BPN.xlsx · sheet Deficit BPN</div></div>', unsafe_allow_html=True)
+                st.markdown('<div class="chart-source">Sursa: MinFin · Deficit BPN</div></div>', unsafe_allow_html=True)
             else:
                 fig_def = bar_chart(YEARS_STR, sold_pib, "amber", ylabel="% PIB", neg_color="amber")
                 st.plotly_chart(fig_def, use_container_width=True, config={"displayModeBar": False})
