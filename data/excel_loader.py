@@ -38,47 +38,253 @@ def _sursa(filename: str, sheet: str = "") -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTOR MONETAR — Date_Sector_Monetar.xlsx
 # ─────────────────────────────────────────────────────────────────────────────
-
 @st.cache_data(ttl=300, show_spinner=False)
 def load_monetar() -> dict:
     """
-    Foaie: Monetar
-    Coloane: An, PIB mil lei, IPC, Rezerve BNM mil USD, Baza monetara mil lei, Depozite
+    Sector Monetar — loader robust
+    Fix:
+    - diacritice unicode
+    - coloane duplicate
+    - conversii numerice sigure
+    - compatibilitate multiple versiuni Excel
     """
+
+    import unicodedata as _uc
+    import os as _os
     fname = "Date_Sector_Monetar.xlsx"
-    if not _file_exists(fname):
-        return {"data": pd.DataFrame(), "sursa": f"{fname} — fisier lipsa", "live": False}
+    _here = _os.path.dirname(_os.path.abspath(__file__))
+    _root = _os.path.dirname(_here)
+
+    _candidates = [
+        _os.path.join(_here, fname),
+        _os.path.join(_root, "data", fname),
+        _os.path.join(_root, fname),
+        _os.path.join("data", fname),
+        fname,
+    ]
+
+    _path_found = next((p for p in _candidates if _os.path.isfile(p)), None)
+
+    if _path_found is None:
+        return {
+            "data": pd.DataFrame(),
+            "sursa": f"{fname} negasit",
+            "live": False
+        }
+
     try:
-        df = pd.read_excel(_path(fname), sheet_name="Monetar", engine="openpyxl")
+        df = pd.read_excel(
+            _path_found,
+            sheet_name="Monetar",
+            engine="openpyxl"
+        )
+
+        # =========================================================
+        # CLEAN HEADERS
+        # =========================================================
+
         df.columns = [str(c).strip() for c in df.columns]
 
-        # Redenumim coloanele la chei scurte consistente
+        def _n(txt):
+            txt = str(txt).strip().lower()
+            txt = _uc.normalize("NFKD", txt)
+            txt = txt.encode("ascii", "ignore").decode()
+            return txt
+
         rename_map = {}
+
         for c in df.columns:
-            cl = c.lower()
-            if "an" == cl:
+
+            cl = _n(c)
+            # AN
+            if cl == "an":
                 rename_map[c] = "an"
+            # IPC
+            elif (
+                ("ipc" in cl)
+                or (
+                    "preturilor de consum" in cl
+                    and (
+                        "sfarsit" in cl
+                        or "sfirsit" in cl
+                        or "sfarsitul" in cl
+                        or "sfirsitul" in cl
+                        or "anului" in cl
+                    )
+                )
+            ):
+                rename_map[c] = "ipc_sfarsit_an"
+            elif ("ipc" in cl or "infl" in cl) and "medi" in cl:
+                rename_map[c] = "ipc_medie_an"
+
+            # REZERVE
+            elif "rezerv" in cl:
+                rename_map[c] = "rezerve_mil_eur"
+
+            # PIB
             elif "pib" in cl:
                 rename_map[c] = "pib_mil_lei"
-            elif "preţ" in cl or "pret" in cl or "ipc" in cl or "consum" in cl:
-                rename_map[c] = "ipc_sfarsit_an"
-            elif "rezerv" in cl:
-                rename_map[c] = "rezerve_mln_usd"
+
+            # RATA BAZA
+            elif "rata" in cl and "baz" in cl:
+                rename_map[c] = "rata_baza_pct"
+
+            # BAZA MONETARA
             elif "baz" in cl and "monetar" in cl:
                 rename_map[c] = "baza_monetara_mil_lei"
-            elif "depozit" in cl:
+
+            elif "bani" in cl or "lichiz" in cl or "(mo)" in cl:
+                rename_map[c] = "baza_monetara_mil_lei"
+
+            # CREDITE
+            elif "credit" in cl and "juridic" in cl:
+                rename_map[c] = "credite_juridice_mil_lei"
+
+            elif "credit" in cl and "fizic" in cl:
+                rename_map[c] = "credite_fizice_mil_lei"
+
+            elif "credit" in cl and "consum" in cl:
+                rename_map[c] = "credite_consum_mil_lei"
+
+            elif "credit" in cl and "imobi" in cl:
+                rename_map[c] = "credite_imobil_mil_lei"
+
+            elif "credit" in cl and "alte" in cl:
+                rename_map[c] = "credite_alte_mil_lei"
+
+            # DEPOZITE TERMEN
+            elif "depozit" in cl and "termen" in cl and "juridic" in cl:
+                rename_map[c] = "depozite_termen_juridice_mil_lei"
+
+            elif "depozit" in cl and "termen" in cl and "fizic" in cl:
+                rename_map[c] = "depozite_termen_fizice_mil_lei"
+
+            # STRUCTURA DEPOZITE
+            elif "depozit" in cl and "vedere" in cl:
+                rename_map[c] = "depozite_vedere_mn_mil_lei"
+
+            elif "depozit" in cl and "termen" in cl and (
+                "national" in cl or
+                "moneda" in cl or
+                "mn" in cl
+            ):
+                rename_map[c] = "depozite_termen_mn_mil_lei"
+
+            elif "depozit" in cl and "valut" in cl:
+                rename_map[c] = "depozite_valuta_mil_lei"
+
+            # DEPOZITE TOTAL
+            elif (
+                "depozit" in cl
+                and "termen" not in cl
+                and "vedere" not in cl
+                and "valut" not in cl
+                and "juridic" not in cl
+                and "fizic" not in cl
+            ):
                 rename_map[c] = "depozite_mil_lei"
 
-        df = df.rename(columns=rename_map)
-        df["an"] = pd.to_numeric(df["an"], errors="coerce").astype("Int64")
-        for col in df.columns:
-            if col != "an":
-                df[col] = pd.to_numeric(df[col], errors="coerce")
-        df = df.dropna(subset=["an"]).sort_values("an").reset_index(drop=True)
-        return {"data": df, "sursa": _sursa(fname, "Monetar"), "live": True}
-    except Exception as e:
-        return {"data": pd.DataFrame(), "sursa": f"Eroare {fname}: {e}", "live": False}
+        # =========================================================
+        # RENAME
+        # =========================================================
 
+        df = df.rename(columns=rename_map)
+
+        # =========================================================
+        # ELIMINA COLOANE DUPLICATE
+        # =========================================================
+
+        df = df.loc[:, ~df.columns.duplicated()]
+
+        # =========================================================
+        # CONVERSII
+        # =========================================================
+
+        if "an" not in df.columns:
+            return {
+                "data": pd.DataFrame(),
+                "sursa": f"{fname}: coloana AN lipseste",
+                "live": False
+            }
+
+        df["an"] = pd.to_numeric(
+            df["an"],
+            errors="coerce"
+        ).astype("Int64")
+
+        numeric_cols = [c for c in df.columns if c != "an"]
+
+        for col in numeric_cols:
+
+            df[col] = (
+                df[col]
+                .astype(str)
+                .str.replace(" ", "", regex=False)
+                .str.replace(",", ".", regex=False)
+            )
+
+            df[col] = pd.to_numeric(
+                df[col],
+                errors="coerce"
+            )
+
+        # =========================================================
+        # SORT
+        # =========================================================
+
+        df = (
+            df
+            .dropna(subset=["an"])
+            .sort_values("an")
+            .reset_index(drop=True)
+        )
+
+        # =========================================================
+        # COLOANE CALCULATE
+        # =========================================================
+
+        if (
+            "credite_juridice_mil_lei" in df.columns
+            and
+            "credite_fizice_mil_lei" in df.columns
+        ):
+            df["credite_total_mil_lei"] = (
+                df["credite_juridice_mil_lei"].fillna(0)
+                +
+                df["credite_fizice_mil_lei"].fillna(0)
+            )
+
+        dep_cols = [
+            c for c in [
+                "depozite_vedere_mn_mil_lei",
+                "depozite_termen_mn_mil_lei",
+                "depozite_valuta_mil_lei"
+            ]
+            if c in df.columns
+        ]
+
+        if dep_cols:
+            df["depozite_total_mil_lei"] = (
+                df[dep_cols]
+                .fillna(0)
+                .sum(axis=1)
+            )
+
+        elif "depozite_mil_lei" in df.columns:
+            df["depozite_total_mil_lei"] = df["depozite_mil_lei"]
+
+        return {
+            "data": df,
+            "sursa": _sursa(fname, "Monetar"),
+            "live": True
+        }
+
+    except Exception as e:
+        return {
+            "data": pd.DataFrame(),
+            "sursa": f"Eroare {fname}: {e}",
+            "live": False
+        }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTOR SOCIAL — Date_Sector_Social.xlsx
