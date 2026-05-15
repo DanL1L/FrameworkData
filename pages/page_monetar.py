@@ -117,9 +117,9 @@ def render():
                     textfont=dict(size=9, color="#444441"),
                     hovertemplate="<b>%{x}</b>: IPC mediu %{y:.1f}%<extra></extra>",
                 ))
-                fig_ipc_m.add_hline(y=5.0, line_dash="dot", line_color="#1D9E75",
-                                    line_width=1.2, annotation_text="Tinta 5%",
-                                    annotation_font_size=9)
+                # fig_ipc_m.add_hline(y=5.0, line_dash="dot", line_color="#1D9E75",
+                #                     line_width=1.2, annotation_text="Tinta 5%",
+                #                     annotation_font_size=9)
                 fig_ipc_m.update_layout(**{**_layout(), "yaxis": dict(
                     gridcolor="#f1efe8", tickfont=dict(size=10),
                     title="%", range=[0, max(ipc_vals_an) * 1.15],
@@ -158,9 +158,9 @@ def render():
                     textfont=dict(size=9, color="#444441"),
                     hovertemplate="<b>%{x}</b>: %{y:.1f}%<extra></extra>",
                 ))
-                fig2.add_hline(y=5.0, line_dash="dot", line_color="#1D9E75",
-                               line_width=1.2, annotation_text="Tinta 5%",
-                               annotation_font_size=9)
+                # fig2.add_hline(y=5.0, line_dash="dot", line_color="#1D9E75",
+                #                line_width=1.2, annotation_text="Tinta 5%",
+                #                annotation_font_size=9)
                 fig2.update_layout(**{**_layout(), "yaxis": dict(
                     gridcolor="#f1efe8", tickfont=dict(size=10), title="%"
                 )})
