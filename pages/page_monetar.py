@@ -103,9 +103,9 @@ def render():
                 ani_tna     = df_tna["an"].astype(str).tolist()
                 ipc_vals_an = (df_tna["ipc_mediu"] - 100).tolist()
                 colors_m = [
-                    "#A32D2D" if v > 20 else
-                    "#E24B4A" if v > 10 else
-                    "#BA7517" if v > 5  else
+                    "#1D9E75" if v > 20 else
+                    "#1D9E75" if v > 10 else
+                    "#1D9E75" if v > 5  else
                     "#1D9E75"
                     for v in ipc_vals_an
                 ]
@@ -144,9 +144,9 @@ def render():
                 years_ipc = df_ipc["an"].astype(str).tolist()
                 vals_ipc  = df_ipc["ipc_sfarsit_an"].tolist()
                 colors_ipc = [
-                    "#A32D2D" if v > 20 else
-                    "#E24B4A" if v > 10 else
-                    "#BA7517" if v > 5  else
+                    "#1D9E75" if v > 20 else
+                    "#1D9E75" if v > 10 else
+                    "#1D9E75" if v > 5  else
                     "#1D9E75"
                     for v in vals_ipc
                 ]

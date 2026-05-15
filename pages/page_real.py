@@ -600,7 +600,6 @@ def render():
             #     '<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Comert_Intern</div></div>',
             #     unsafe_allow_html=True
             # )
-
     # ═══════════════════════════════════════════════════════════════════════════
     # TAB TRANSPORT
     # ═══════════════════════════════════════════════════════════════════════════
@@ -674,7 +673,6 @@ def render():
             })
             st.plotly_chart(fig_sm, use_container_width=True, config={"displayModeBar": False})
             # st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Tranport</div></div>', unsafe_allow_html=True)
-
         with col4:
             st.markdown('<div class="chart-card"><div class="chart-card-title">Structura transport pasageri pe tip (mii)</div>', unsafe_allow_html=True)
             fig_sp = go.Figure()
