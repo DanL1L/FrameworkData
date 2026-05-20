@@ -16,6 +16,7 @@ from utils.state import page_header, kpi_card, kpi_row
 from utils.data_loader import sursa_badge
 from utils.api_bns import get_pib_sinteza
 from utils.api_bns_scraper import get_indicatori_cheie
+from utils.api_comert_extern import get_comert_ext_bns
 from data.demo_data import (
     YEARS_STR, export_vals, import_vals,
     pib_real_growth, prog_years, prog_medd, prog_imf, prog_wb,
@@ -108,6 +109,18 @@ def render():
     df         = result_tna["data"]
     is_live    = result_tna["live"]
     sursa_lbl  = "BNS TNA01 — live" if is_live else "BNS"
+
+    # ── Date BNS EXT015000 — Export/Import anual ──────────────────────────────
+    res_ext   = get_comert_ext_bns()
+    df_ext    = res_ext["data"]
+    df_total  = df_ext[df_ext["grupa"] == "Total"].dropna(subset=["export_mil_usd","import_mil_usd"]) if not df_ext.empty else df_ext
+    df_anual  = (
+        df_total.groupby("an")
+        .agg(export=("export_mil_usd","sum"), import_=("import_mil_usd","sum"),
+             n_luni=("luna_nr","count"))
+        .reset_index()
+        .sort_values("an")
+    ) if not df_total.empty else pd.DataFrame()
 
     # ── Indicatori cheie — scraping statistica.gov.md ─────────────────────────
     result_kpi = get_indicatori_cheie()
@@ -265,16 +278,39 @@ def render():
     with col4:
         st.markdown('<div class="chart-card"><div class="chart-card-title">Export vs Import (mil. USD)</div>', unsafe_allow_html=True)
         fig4 = go.Figure()
-        fig4.add_trace(go.Bar(
-            name="Export", x=YEARS_STR, y=export_vals,
-            marker_color="#1D9E75", opacity=0.85,
-            hovertemplate="Export <b>%{x}</b>: %{y:,.0f} mil. USD<extra></extra>",
-        ))
-        fig4.add_trace(go.Bar(
-            name="Import", x=YEARS_STR, y=import_vals,
-            marker_color="#E24B4A", opacity=0.70,
-            hovertemplate="Import <b>%{x}</b>: %{y:,.0f} mil. USD<extra></extra>",
-        ))
+        if not df_anual.empty:
+            ani_str   = df_anual["an"].astype(str).tolist()
+            exp_list  = df_anual["export"].tolist()
+            imp_list  = df_anual["import_"].tolist()
+            # Anul curent cu date partiale — bara hasurata
+            n_luni_last = int(df_anual["n_luni"].iloc[-1])
+            marker_opacity_exp = [0.85] * (len(ani_str) - 1) + [0.45 if n_luni_last < 12 else 0.85]
+            marker_opacity_imp = [0.70] * (len(ani_str) - 1) + [0.35 if n_luni_last < 12 else 0.70]
+            fig4.add_trace(go.Bar(
+                name="Export", x=ani_str, y=exp_list,
+                marker_color="#1D9E75",
+                marker_opacity=marker_opacity_exp,
+                hovertemplate="Export <b>%{x}</b>: %{y:,.0f} mil. USD<extra></extra>",
+            ))
+            fig4.add_trace(go.Bar(
+                name="Import", x=ani_str, y=imp_list,
+                marker_color="#E24B4A",
+                marker_opacity=marker_opacity_imp,
+                hovertemplate="Import <b>%{x}</b>: %{y:,.0f} mil. USD<extra></extra>",
+            ))
+            if n_luni_last < 12:
+                fig4.add_annotation(
+                    x=ani_str[-1], y=0, yref="paper",
+                    text=f"*{n_luni_last} luni", showarrow=False,
+                    font=dict(size=9, color="#888780"), yanchor="bottom",
+                )
+            ext_ts = res_ext.get("ts", "")
+        else:
+            fig4.add_trace(go.Bar(name="Export", x=YEARS_STR, y=export_vals,
+                                  marker_color="#1D9E75", opacity=0.85))
+            fig4.add_trace(go.Bar(name="Import", x=YEARS_STR, y=import_vals,
+                                  marker_color="#E24B4A", opacity=0.70))
+            ext_ts = "demo"
         fig4.update_layout(**{
             **_layout(),
             "barmode": "group",
@@ -283,8 +319,6 @@ def render():
                            font=dict(size=10), bgcolor="rgba(0,0,0,0)"),
         })
         st.plotly_chart(fig4, use_container_width=True, config={"displayModeBar": False})
-        # st.markdown('<div class="chart-source">Sursa: BNM — Balanta de plati</div></div>', unsafe_allow_html=True)
-
     st.markdown("---")
     ts_scraper = result_kpi.get("ts", "")
     live_str   = "live" if kpi_live else "fallback"

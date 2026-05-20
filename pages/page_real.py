@@ -11,6 +11,12 @@ import pandas as pd
 import os
 
 from utils.state import page_header, kpi_card, kpi_row
+from utils.api_agricultura import (
+    get_culturi_bns, get_plantatii_bns,
+    get_productie_animala_bns, get_efectiv_animale_bns,
+    get_culturi_regionale_bns, get_animale_regionale_bns,
+)
+from utils.api_agricultura import _REGIUNE_COLOR as _AGR_REG_COLOR
 
 
 def _find(filename: str) -> str | None:
@@ -141,6 +147,13 @@ def render():
     if not data["ok"]:
         st.error(f"Eroare la incarcarea datelor: {data['eroare']}")
         return
+
+    res_culturi     = get_culturi_bns()
+    res_plantatii   = get_plantatii_bns()
+    res_anim_prod   = get_productie_animala_bns()
+    res_efectiv     = get_efectiv_animale_bns()
+    res_cult_reg    = get_culturi_regionale_bns()
+    res_anim_reg    = get_animale_regionale_bns()
 
     df_real  = data["real"]
     df_pib   = data["pib"]
@@ -470,6 +483,406 @@ def render():
             })
             st.plotly_chart(fig_aqt, use_container_width=True, config={"displayModeBar": False})
             # st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Agricultura</div></div>', unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        # ── Recolta principalelor culturi ────────────────────────────────────
+        df_cult = res_culturi["data"]
+        if not df_cult.empty:
+            st.markdown('<div class="chart-card"><div class="chart-card-title">Recolta principalelor culturi agricole (mii tone)</div>', unsafe_allow_html=True)
+            culturi_ord = ["Cereale", "Porumb", "Floarea-soarelui", "Soia", "Legume", "Cartofi"]
+            CULT_COLORS = {
+                "Cereale":           "#185FA5",
+                "Porumb":            "#E8A823",
+                "Floarea-soarelui":  "#E24B4A",
+                "Soia":              "#1D9E75",
+                "Legume":            "#534AB7",
+                "Cartofi":           "#854F0B",
+            }
+            ani_cult = sorted(df_cult["an"].unique().tolist())
+            ani_str_cult = [str(a) for a in ani_cult]
+            fig_cult = go.Figure()
+            for cultura in culturi_ord:
+                df_c = df_cult[df_cult["cultura"] == cultura].sort_values("an")
+                if not df_c.empty:
+                    fig_cult.add_trace(go.Scatter(
+                        name=cultura,
+                        x=df_c["an"].astype(str).tolist(),
+                        y=df_c["recolta_mii_tone"].tolist(),
+                        mode="lines+markers",
+                        line=dict(color=CULT_COLORS.get(cultura, "#888780"), width=2),
+                        marker=dict(size=5),
+                        hovertemplate=f"<b>{cultura} %{{x}}</b>: %{{y:,.1f}} mii tone<extra></extra>",
+                    ))
+            fig_cult.update_layout(
+                height=320, paper_bgcolor="white", plot_bgcolor="white",
+                font=dict(family="IBM Plex Sans", size=11, color="#444441"),
+                margin=dict(l=10, r=10, t=10, b=10),
+                legend=dict(orientation="h", y=1.05, x=0, font=dict(size=10),
+                            bgcolor="rgba(0,0,0,0)"),
+                xaxis=dict(showgrid=False, linecolor="#e8e4dc", tickfont=dict(size=10)),
+                yaxis=dict(gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False,
+                           title="mii tone"),
+            )
+            st.plotly_chart(fig_cult, use_container_width=True, config={"displayModeBar": False})
+            st.markdown(f'<div class="chart-source">Sursa: BNS ({res_culturi["ts"]})</div></div>', unsafe_allow_html=True)
+
+            # Heatmap recolta pe culturi si ani
+            st.markdown('<div class="chart-card"><div class="chart-card-title">Recolta pe culturi si ani (mii tone)</div>', unsafe_allow_html=True)
+            pivot_cult = df_cult[df_cult["cultura"].isin(culturi_ord)].pivot_table(
+                index="cultura", columns="an", values="recolta_mii_tone", aggfunc="first"
+            )
+            pivot_cult = pivot_cult.reindex([c for c in culturi_ord if c in pivot_cult.index])
+            ani_hm = [str(a) for a in pivot_cult.columns.tolist()]
+            fig_hm = go.Figure(go.Heatmap(
+                z=pivot_cult.values.tolist(),
+                x=ani_hm,
+                y=pivot_cult.index.tolist(),
+                colorscale=[[0, "#FFF3E0"], [0.5, "#FFB74D"], [1, "#1D9E75"]],
+                showscale=True,
+                hovertemplate="<b>%{y} %{x}</b>: %{z:,.1f} mii tone<extra></extra>",
+                texttemplate="%{z:.0f}",
+                textfont=dict(size=9),
+            ))
+            fig_hm.update_layout(
+                height=280, paper_bgcolor="white", plot_bgcolor="white",
+                font=dict(family="IBM Plex Sans", size=10, color="#444441"),
+                margin=dict(l=10, r=10, t=10, b=10),
+                xaxis=dict(side="bottom", tickfont=dict(size=10)),
+                yaxis=dict(tickfont=dict(size=10), autorange="reversed"),
+            )
+            st.plotly_chart(fig_hm, use_container_width=True, config={"displayModeBar": False})
+            st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_culturi["ts"]})</div></div>', unsafe_allow_html=True)
+
+        # ── Plantatii pomicole si viticole ───────────────────────────────────
+        df_plan = res_plantatii["data"]
+        if not df_plan.empty:
+            col1, col2 = st.columns(2)
+            PLAN_COLORS = {"Pomicole": "#854F0B", "Viticole": "#7B3FA6"}
+
+            with col1:
+                st.markdown('<div class="chart-card"><div class="chart-card-title">Recolta plantatii pomicole (mii tone)</div>', unsafe_allow_html=True)
+                df_pom = df_plan[df_plan["plantatie"] == "Pomicole"].sort_values("an")
+                if not df_pom.empty:
+                    colors_pom = ["#A0724C"] * (len(df_pom) - 1) + ["#854F0B"]
+                    fig_pom = go.Figure(go.Bar(
+                        x=df_pom["an"].astype(str).tolist(),
+                        y=df_pom["recolta_mii_tone"].tolist(),
+                        marker_color=colors_pom, opacity=0.88,
+                        text=[f"{v:.0f}" for v in df_pom["recolta_mii_tone"]],
+                        textposition="outside", textfont=dict(size=9),
+                        hovertemplate="<b>%{x}</b>: %{y:,.1f} mii tone<extra></extra>",
+                    ))
+                    fig_pom.update_layout(
+                        height=280, paper_bgcolor="white", plot_bgcolor="white",
+                        font=dict(family="IBM Plex Sans", size=11, color="#444441"),
+                        margin=dict(l=10, r=10, t=30, b=10), showlegend=False,
+                        xaxis=dict(showgrid=False, tickfont=dict(size=10)),
+                        yaxis=dict(gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False,
+                                   title="mii tone"),
+                    )
+                    st.plotly_chart(fig_pom, use_container_width=True, config={"displayModeBar": False})
+                st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_plantatii["ts"]})</div></div>', unsafe_allow_html=True)
+
+            with col2:
+                st.markdown('<div class="chart-card"><div class="chart-card-title">Recolta plantatii viticole (mii tone)</div>', unsafe_allow_html=True)
+                df_vit = df_plan[df_plan["plantatie"] == "Viticole"].sort_values("an")
+                if not df_vit.empty:
+                    colors_vit = ["#9B69B5"] * (len(df_vit) - 1) + ["#7B3FA6"]
+                    fig_vit = go.Figure(go.Bar(
+                        x=df_vit["an"].astype(str).tolist(),
+                        y=df_vit["recolta_mii_tone"].tolist(),
+                        marker_color=colors_vit, opacity=0.88,
+                        text=[f"{v:.0f}" for v in df_vit["recolta_mii_tone"]],
+                        textposition="outside", textfont=dict(size=9),
+                        hovertemplate="<b>%{x}</b>: %{y:,.1f} mii tone<extra></extra>",
+                    ))
+                    fig_vit.update_layout(
+                        height=280, paper_bgcolor="white", plot_bgcolor="white",
+                        font=dict(family="IBM Plex Sans", size=11, color="#444441"),
+                        margin=dict(l=10, r=10, t=30, b=10), showlegend=False,
+                        xaxis=dict(showgrid=False, tickfont=dict(size=10)),
+                        yaxis=dict(gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False,
+                                   title="mii tone"),
+                    )
+                    st.plotly_chart(fig_vit, use_container_width=True, config={"displayModeBar": False})
+                st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_plantatii["ts"]})</div></div>', unsafe_allow_html=True)
+
+        # ── Productia animala ────────────────────────────────────────────────
+        df_anim = res_anim_prod["data"]
+        if not df_anim.empty:
+            # KPI ultima valoare per produs
+            kpi_anim_cards = []
+            for produs, unitate in [("Carne (greutate vie)", "mii tone"),
+                                     ("Lapte", "mii tone"),
+                                     ("Oua", "mln. bucati")]:
+                df_p = df_anim[df_anim["produs"] == produs].sort_values("an")
+                if not df_p.empty:
+                    val_last = df_p["valoare"].iloc[-1]
+                    an_last_p = int(df_p["an"].iloc[-1])
+                    df_prev_p = df_p[df_p["an"] == an_last_p - 1]
+                    val_prev = df_prev_p["valoare"].iloc[0] if not df_prev_p.empty else None
+                    chg = (val_last - val_prev) / val_prev * 100 if val_prev and val_prev != 0 else None
+                    kpi_anim_cards.append(kpi_card(
+                        produs,
+                        f"{val_last:,.1f}",
+                        unitate,
+                        f"{chg:+.1f}% vs {an_last_p - 1}" if chg is not None else str(an_last_p),
+                        chg is not None and chg > 0,
+                        "green",
+                    ))
+            if kpi_anim_cards:
+                kpi_row(kpi_anim_cards)
+
+            col1, col2 = st.columns(2)
+            ANIM_COLORS = {
+                "Carne (greutate vie)": "#E24B4A",
+                "Lapte":                "#185FA5",
+                "Oua":                  "#E8A823",
+            }
+
+            with col1:
+                st.markdown('<div class="chart-card"><div class="chart-card-title">Carne si lapte (mii tone)</div>', unsafe_allow_html=True)
+                fig_al = go.Figure()
+                for produs in ["Carne (greutate vie)", "Lapte"]:
+                    df_p = df_anim[df_anim["produs"] == produs].sort_values("an")
+                    if not df_p.empty:
+                        fig_al.add_trace(go.Scatter(
+                            name=produs,
+                            x=df_p["an"].astype(str).tolist(),
+                            y=df_p["valoare"].tolist(),
+                            mode="lines+markers",
+                            line=dict(color=ANIM_COLORS[produs], width=2.5),
+                            marker=dict(size=5),
+                            hovertemplate=f"<b>{produs} %{{x}}</b>: %{{y:,.1f}} mii tone<extra></extra>",
+                        ))
+                fig_al.update_layout(
+                    height=280, paper_bgcolor="white", plot_bgcolor="white",
+                    font=dict(family="IBM Plex Sans", size=11, color="#444441"),
+                    margin=dict(l=10, r=10, t=10, b=10),
+                    legend=dict(orientation="h", y=1.05, x=0, font=dict(size=10),
+                                bgcolor="rgba(0,0,0,0)"),
+                    xaxis=dict(showgrid=False, linecolor="#e8e4dc", tickfont=dict(size=9),
+                               tickangle=-45),
+                    yaxis=dict(gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False,
+                               title="mii tone"),
+                )
+                st.plotly_chart(fig_al, use_container_width=True, config={"displayModeBar": False})
+                # st.markdown(f'<div class="chart-source">Sursa: BNS AGR030200 ({res_anim_prod["ts"]})</div></div>', unsafe_allow_html=True)
+
+            with col2:
+                st.markdown('<div class="chart-card"><div class="chart-card-title">Productia de oua (mln. bucati)</div>', unsafe_allow_html=True)
+                df_oua = df_anim[df_anim["produs"] == "Oua"].sort_values("an")
+                if not df_oua.empty:
+                    fig_oua = go.Figure(go.Bar(
+                        x=df_oua["an"].astype(str).tolist(),
+                        y=df_oua["valoare"].tolist(),
+                        marker_color="#E8A823", opacity=0.85,
+                        text=[f"{v:.0f}" for v in df_oua["valoare"]],
+                        textposition="outside", textfont=dict(size=9),
+                        hovertemplate="<b>%{x}</b>: %{y:,.1f} mln. buc.<extra></extra>",
+                    ))
+                    fig_oua.update_layout(
+                        height=280, paper_bgcolor="white", plot_bgcolor="white",
+                        font=dict(family="IBM Plex Sans", size=11, color="#444441"),
+                        margin=dict(l=10, r=10, t=30, b=10), showlegend=False,
+                        xaxis=dict(showgrid=False, tickfont=dict(size=9), tickangle=-45),
+                        yaxis=dict(gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False,
+                                   title="mln. bucati"),
+                    )
+                    st.plotly_chart(fig_oua, use_container_width=True, config={"displayModeBar": False})
+                # st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_anim_prod["ts"]})</div></div>', unsafe_allow_html=True)
+
+        # ── Efectivul de animale ─────────────────────────────────────────────
+        df_efect = res_efectiv["data"]
+        if not df_efect.empty:
+            st.markdown('<div class="chart-card"><div class="chart-card-title">Efectivul de animale la 1 ianuarie (mii capete)</div>', unsafe_allow_html=True)
+            EFECT_COLORS = {"Bovine": "#854F0B", "Porcine": "#E24B4A", "Ovine": "#1D9E75"}
+            fig_efect = go.Figure()
+            for specie, color in EFECT_COLORS.items():
+                df_s = df_efect[df_efect["specie"] == specie].sort_values("an")
+                if not df_s.empty:
+                    fig_efect.add_trace(go.Scatter(
+                        name=specie,
+                        x=df_s["an"].astype(str).tolist(),
+                        y=df_s["mii_capete"].tolist(),
+                        mode="lines+markers",
+                        line=dict(color=color, width=2.5),
+                        marker=dict(size=5),
+                        hovertemplate=f"<b>{specie} %{{x}}</b>: %{{y:,.1f}} mii capete<extra></extra>",
+                    ))
+            fig_efect.update_layout(
+                height=300, paper_bgcolor="white", plot_bgcolor="white",
+                font=dict(family="IBM Plex Sans", size=11, color="#444441"),
+                margin=dict(l=10, r=10, t=10, b=10),
+                legend=dict(orientation="h", y=1.05, x=0, font=dict(size=10),
+                            bgcolor="rgba(0,0,0,0)"),
+                xaxis=dict(showgrid=False, linecolor="#e8e4dc", tickfont=dict(size=9),
+                           tickangle=-45),
+                yaxis=dict(gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False,
+                           title="mii capete"),
+            )
+            st.plotly_chart(fig_efect, use_container_width=True, config={"displayModeBar": False})
+            # st.markdown(f'<div class="chart-source">Sursa: BNS AGR030100 ({res_efectiv["ts"]})</div></div>', unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        # ── Profil teritorial ────────────────────────────────────────────────
+        st.markdown("#### Profil teritorial")
+
+        df_creg = res_cult_reg["data"]
+        df_areg = res_anim_reg["data"]
+
+        if df_creg.empty and df_areg.empty:
+            st.info("Date teritoriale indisponibile.")
+        else:
+            REGIUNE_COLOR = _AGR_REG_COLOR
+
+            # ── Selectori ────────────────────────────────────────────────────
+            col_ts1, col_ts2, col_ts3, _ = st.columns([1, 1, 1, 1])
+
+            ani_reg = sorted(
+                (df_creg["an"].dropna().unique().tolist() if not df_creg.empty else []) or
+                (df_areg["an"].dropna().unique().tolist() if not df_areg.empty else []),
+                reverse=True,
+            )
+            culturi_disp = sorted(df_creg["cultura"].unique().tolist()) if not df_creg.empty else []
+            specii_disp  = sorted(df_areg["specie"].unique().tolist())  if not df_areg.empty else []
+
+            with col_ts1:
+                an_reg = st.selectbox("An", [int(a) for a in ani_reg], key="reg_an")
+            with col_ts2:
+                cult_sel = st.selectbox("Cultura", culturi_disp, key="reg_cult") if culturi_disp else None
+            with col_ts3:
+                nivel_sel = st.radio("Nivel", ["Regiuni", "Raioane"], horizontal=True, key="reg_nivel")
+
+            este_regiune = nivel_sel == "Regiuni"
+
+            # ── Productia regionala — culturi ─────────────────────────────────
+            if not df_creg.empty and cult_sel:
+                df_cr_an = df_creg[
+                    (df_creg["an"] == an_reg) &
+                    (df_creg["cultura"] == cult_sel) &
+                    (df_creg["este_regiune"] == este_regiune)
+                ].dropna(subset=["recolta_mii_tone"]).sort_values("recolta_mii_tone", ascending=True)
+
+                if not df_cr_an.empty:
+                    st.markdown(f'<div class="chart-card"><div class="chart-card-title">Recolta {cult_sel} pe {"regiuni" if este_regiune else "raioane"} — {an_reg} (mii tone)</div>', unsafe_allow_html=True)
+
+                    bar_colors = [REGIUNE_COLOR.get(rp, "#888780") for rp in df_cr_an["regiune_parinte"]]
+                    fig_creg = go.Figure(go.Bar(
+                        y=df_cr_an["regiune"].tolist(),
+                        x=df_cr_an["recolta_mii_tone"].tolist(),
+                        orientation="h",
+                        marker_color=bar_colors,
+                        opacity=0.88,
+                        text=[f"{v:.1f}" for v in df_cr_an["recolta_mii_tone"]],
+                        textposition="outside",
+                        textfont=dict(size=9),
+                        hovertemplate="<b>%{y}</b>: %{x:,.1f} mii tone<extra></extra>",
+                    ))
+                    h_creg = max(280, len(df_cr_an) * 22)
+                    fig_creg.update_layout(
+                        height=h_creg, paper_bgcolor="white", plot_bgcolor="white",
+                        font=dict(family="IBM Plex Sans", size=10, color="#444441"),
+                        margin=dict(l=10, r=70, t=10, b=10), showlegend=False,
+                        xaxis=dict(gridcolor="#f1efe8", tickfont=dict(size=9), zeroline=False,
+                                   title="mii tone"),
+                        yaxis=dict(showgrid=False, tickfont=dict(size=9 if not este_regiune else 11)),
+                    )
+                    st.plotly_chart(fig_creg, use_container_width=True, config={"displayModeBar": False})
+                    if not este_regiune:
+                        leg_html = " &nbsp;".join(
+                            f'<span style="color:{c};font-weight:600">■</span> {r}'
+                            for r, c in REGIUNE_COLOR.items()
+                        )
+                        st.markdown(f'<p style="font-size:10px;color:#888780">{leg_html}</p>', unsafe_allow_html=True)
+                    # st.markdown(f'<div class="chart-source">Sursa: BNS AGR020600reg ({res_cult_reg["ts"]})</div></div>', unsafe_allow_html=True)
+
+                # Comparație toate culturile per regiune (doar la nivel regiune)
+                if este_regiune:
+                    df_cr_multi = df_creg[
+                        (df_creg["an"] == an_reg) &
+                        (df_creg["este_regiune"] == True)
+                    ].dropna(subset=["recolta_mii_tone"])
+
+                    if not df_cr_multi.empty:
+                        st.markdown(f'<div class="chart-card"><div class="chart-card-title">Toate culturile pe regiuni — {an_reg} (mii tone)</div>', unsafe_allow_html=True)
+                        culturi_multi = sorted(df_cr_multi["cultura"].unique().tolist())
+                        regiuni_ord   = ["Nord", "Centru", "Sud", "Mun. Chisinau", "UTA Gagauzia"]
+                        CULT_COLORS_M = {
+                            "Cereale": "#185FA5", "Porumb": "#E8A823",
+                            "Floarea-soarelui": "#E24B4A", "Soia": "#1D9E75",
+                            "Legume": "#534AB7",  "Cartofi": "#854F0B",
+                        }
+                        fig_cm = go.Figure()
+                        for cult in culturi_multi:
+                            df_c = df_cr_multi[df_cr_multi["cultura"] == cult]
+                            df_c = df_c.set_index("regiune").reindex(regiuni_ord).reset_index()
+                            fig_cm.add_trace(go.Bar(
+                                name=cult,
+                                x=regiuni_ord,
+                                y=df_c["recolta_mii_tone"].tolist(),
+                                marker_color=CULT_COLORS_M.get(cult, "#888780"),
+                                opacity=0.88,
+                                hovertemplate=f"<b>{cult} %{{x}}</b>: %{{y:,.1f}} mii tone<extra></extra>",
+                            ))
+                        fig_cm.update_layout(
+                            height=320, paper_bgcolor="white", plot_bgcolor="white",
+                            font=dict(family="IBM Plex Sans", size=11, color="#444441"),
+                            margin=dict(l=10, r=10, t=10, b=10), barmode="group",
+                            legend=dict(orientation="h", y=1.05, x=0, font=dict(size=10),
+                                        bgcolor="rgba(0,0,0,0)"),
+                            xaxis=dict(showgrid=False, tickfont=dict(size=10)),
+                            yaxis=dict(gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False,
+                                       title="mii tone"),
+                        )
+                        st.plotly_chart(fig_cm, use_container_width=True, config={"displayModeBar": False})
+                        # st.markdown(f'<div class="chart-source">Sursa: BNS AGR020600reg ({res_cult_reg["ts"]})</div></div>', unsafe_allow_html=True)
+
+            # ── Efectivul de animale — teritorial ─────────────────────────────
+            if not df_areg.empty and specii_disp:
+                col_a1, _ = st.columns([1, 3])
+                with col_a1:
+                    specie_sel = st.selectbox("Specie animale", specii_disp, key="reg_specie")
+
+                df_ar_an = df_areg[
+                    (df_areg["an"] == an_reg) &
+                    (df_areg["specie"] == specie_sel) &
+                    (df_areg["este_regiune"] == este_regiune)
+                ].dropna(subset=["mii_capete"]).sort_values("mii_capete", ascending=True)
+
+                if not df_ar_an.empty:
+                    st.markdown(f'<div class="chart-card"><div class="chart-card-title">Efectiv {specie_sel} pe {"regiuni" if este_regiune else "raioane"} la 1 ian. {an_reg} (mii capete)</div>', unsafe_allow_html=True)
+                    bar_colors_a = [REGIUNE_COLOR.get(rp, "#888780") for rp in df_ar_an["regiune_parinte"]]
+                    fig_areg = go.Figure(go.Bar(
+                        y=df_ar_an["regiune"].tolist(),
+                        x=df_ar_an["mii_capete"].tolist(),
+                        orientation="h",
+                        marker_color=bar_colors_a,
+                        opacity=0.88,
+                        text=[f"{v:.1f}" for v in df_ar_an["mii_capete"]],
+                        textposition="outside",
+                        textfont=dict(size=9),
+                        hovertemplate="<b>%{y}</b>: %{x:,.1f} mii capete<extra></extra>",
+                    ))
+                    h_areg = max(280, len(df_ar_an) * 22)
+                    fig_areg.update_layout(
+                        height=h_areg, paper_bgcolor="white", plot_bgcolor="white",
+                        font=dict(family="IBM Plex Sans", size=10, color="#444441"),
+                        margin=dict(l=10, r=70, t=10, b=10), showlegend=False,
+                        xaxis=dict(gridcolor="#f1efe8", tickfont=dict(size=9), zeroline=False,
+                                   title="mii capete"),
+                        yaxis=dict(showgrid=False, tickfont=dict(size=9 if not este_regiune else 11)),
+                    )
+                    st.plotly_chart(fig_areg, use_container_width=True, config={"displayModeBar": False})
+                    if not este_regiune:
+                        leg_html = " &nbsp;".join(
+                            f'<span style="color:{c};font-weight:600">■</span> {r}'
+                            for r, c in REGIUNE_COLOR.items()
+                        )
+                        st.markdown(f'<p style="font-size:10px;color:#888780">{leg_html}</p>', unsafe_allow_html=True)
+                    # st.markdown(f'<div class="chart-source">Sursa: BNS AGR030300reg ({res_anim_reg["ts"]})</div></div>', unsafe_allow_html=True)
 
     # ═══════════════════════════════════════════════════════════════════════════
     # TAB COMERT INTERN

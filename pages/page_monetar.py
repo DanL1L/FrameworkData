@@ -128,6 +128,11 @@ def render():
                                 config={"displayModeBar": False})
                 ts_tna   = res_tna.get("ts","")
                 live_lbl = "live" if res_tna.get("live") else "date referinta"
+                # st.markdown(
+                #     f'<div class="chart-source">Sursa: BNS TNA01 ({live_lbl}) · '
+                #     f'saved query cc6bdb68 · {ts_tna}</div></div>',
+                #     unsafe_allow_html=True,
+                # )
             else:
                 st.info("IPC medie anuala indisponibila — API BNS offline.")
                 # st.markdown('<div class="chart-source">Sursa: BNS TNA01</div></div>', unsafe_allow_html=True)
