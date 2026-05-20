@@ -1,12 +1,3 @@
-"""
-page_overview.py — Indicatorii MacroEconomici
-Surse:
-  (1) statistica.gov.md — indicatori cheie (scraping live, ttl=3600)
-      Afisati: PIB | Rata inflatiei | Productia industriala | Productia agricola
-               Rata somajului | Salariul mediu | Export | Import
-  (2) BNS TNA01 — PIB mii USD, PIB/locuitor, IPC mediu anual
-      saved query: cc6bdb68-c935-4396-a7cc-c78470fe8d0c
-"""
 
 import streamlit as st
 import plotly.graph_objects as go
@@ -22,9 +13,6 @@ from data.demo_data import (
     pib_real_growth, prog_years, prog_medd, prog_imf, prog_wb,
 )
 
-# ── Ordinea dorita si maparea titlurilor BNS → slot ──────────────────────────
-# Cheile sunt fragmente din titlul scraped (case-insensitive, fara diacritice)
-# Valoarea = pozitia 0-7 in grila de 8 carduri (2 randuri x 4)
 _SLOT_MAP = {
     "pib":                  0,   # PIB — crestere reala
     "inflat":               1,   # Rata inflatiei
@@ -36,7 +24,6 @@ _SLOT_MAP = {
     "import":               7,   # Import
 }
 
-# Culori per slot (corespund sectorului fiecarui indicator)
 _SLOT_COLOR = {
     0: "blue",    # PIB
     1: "pink",    # Inflatie
@@ -104,13 +91,13 @@ def render():
         "blue"
     )
 
-    # ── Date BNS TNA01 ────────────────────────────────────────────────────────
+    # ── Date ────────────────────────────────────────────────────────
     result_tna = get_pib_sinteza()
     df         = result_tna["data"]
     is_live    = result_tna["live"]
     sursa_lbl  = "BNS TNA01 — live" if is_live else "BNS"
 
-    # ── Date BNS EXT015000 — Export/Import anual ──────────────────────────────
+    # ── Date BNS  — Export/Import anual ──────────────────────────────
     res_ext   = get_comert_ext_bns()
     df_ext    = res_ext["data"]
     df_total  = df_ext[df_ext["grupa"] == "Total"].dropna(subset=["export_mil_usd","import_mil_usd"]) if not df_ext.empty else df_ext
@@ -122,16 +109,15 @@ def render():
         .sort_values("an")
     ) if not df_total.empty else pd.DataFrame()
 
-    # ── Indicatori cheie — scraping statistica.gov.md ─────────────────────────
+    # ── Indicatori cheie  scraping  ─────────────────────────
     result_kpi = get_indicatori_cheie()
     kpi_live   = result_kpi["live"]
     indicatori = result_kpi["data"]
 
-    # Badge sursa
-    st.markdown(sursa_badge(result_kpi), unsafe_allow_html=True)
-    if result_kpi.get("eroare"):
-        st.caption(f"{result_kpi['eroare']}")
-    st.markdown("")
+    # st.markdown(sursa_badge(result_kpi), unsafe_allow_html=True)
+    # if result_kpi.get("eroare"):
+    #     st.caption(f"{result_kpi['eroare']}")
+    # st.markdown("")
 
     # ── Construieste grila de 8 carduri ordonata ──────────────────────────────
     # Slot-uri: [0..7], None = card gol (nu a fost gasit indicatorul)
