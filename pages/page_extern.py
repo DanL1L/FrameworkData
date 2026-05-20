@@ -186,7 +186,7 @@ def render():
         )
         st.plotly_chart(fig_a, use_container_width=True, config={"displayModeBar": False})
         nota = f" · *{an_curent}: date partiale ({n_luni_curent} luni)" if n_luni_curent < 12 else ""
-        st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_ext["ts"]}){nota}</div></div>', unsafe_allow_html=True)
+        # st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_ext["ts"]}){nota}</div></div>', unsafe_allow_html=True)
 
         # Comparatie anuala
         ani_disponibili = sorted(df_total["an"].dropna().unique().tolist(), reverse=True)
@@ -269,7 +269,7 @@ def render():
                     legend=dict(font=dict(size=9), bgcolor="rgba(0,0,0,0)"),
                 )
                 st.plotly_chart(fig_g2, use_container_width=True, config={"displayModeBar": False})
-        st.markdown(f'<div class="chart-source">Sursa: BNS — {label} ({res_ext["ts"]})</div></div>', unsafe_allow_html=True)
+        # st.markdown(f'<div class="chart-source">Sursa: BNS — {label} ({res_ext["ts"]})</div></div>', unsafe_allow_html=True)
 
     # ── TAB 4: Grupe de tari ─────────────────────────────────────────────────
     with tab4:
@@ -317,7 +317,7 @@ def render():
                            title="mil. USD"),
             )
             st.plotly_chart(fig_t1, use_container_width=True, config={"displayModeBar": False})
-            st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_ext["ts"]})</div></div>', unsafe_allow_html=True)
+            # st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_ext["ts"]})</div></div>', unsafe_allow_html=True)
 
         with col2:
             st.markdown(f'<div class="chart-card"><div class="chart-card-title">Structura {tip_g} pe grupe tari — {an_g} (%)</div>', unsafe_allow_html=True)
@@ -338,7 +338,7 @@ def render():
                     legend=dict(font=dict(size=9), bgcolor="rgba(0,0,0,0)"),
                 )
                 st.plotly_chart(fig_t2, use_container_width=True, config={"displayModeBar": False})
-            st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_ext["ts"]})</div></div>', unsafe_allow_html=True)
+            # st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_ext["ts"]})</div></div>', unsafe_allow_html=True)
 
         # Comparatie Export vs Import pentru fiecare grupa in anul selectat
         st.markdown(f'<div class="chart-card"><div class="chart-card-title">Export vs Import pe grupe de tari — {an_g} (mil. USD)</div>', unsafe_allow_html=True)
@@ -368,7 +368,7 @@ def render():
                            title="mil. USD"),
             )
             st.plotly_chart(fig_t3, use_container_width=True, config={"displayModeBar": False})
-        st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_ext["ts"]})</div></div>', unsafe_allow_html=True)
+        # st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_ext["ts"]})</div></div>', unsafe_allow_html=True)
 
         # Evolutie lunara in anul selectat, pe grupe
         st.markdown(f'<div class="chart-card"><div class="chart-card-title">Evolutie lunara {tip_g} pe grupe de tari — {an_g} (mil. USD)</div>', unsafe_allow_html=True)
@@ -397,7 +397,7 @@ def render():
                            title="mil. USD"),
             )
             st.plotly_chart(fig_t4, use_container_width=True, config={"displayModeBar": False})
-        st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_ext["ts"]})</div></div>', unsafe_allow_html=True)
+        # st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_ext["ts"]})</div></div>', unsafe_allow_html=True)
 
     # ── TAB TOP ȚĂRI ─────────────────────────────────────────────────────────
     with tab_tari:
@@ -474,7 +474,7 @@ def render():
                         st.info(f"Fara date export pentru {trim_t} {an_t}.")
                 else:
                     st.info("Date export pe tari indisponibile.")
-                st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_tari["ts"]})</div></div>', unsafe_allow_html=True)
+                # st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_tari["ts"]})</div></div>', unsafe_allow_html=True)
 
             # ── Top 10 Import ─────────────────────────────────────────────────
             with col2:
@@ -515,7 +515,7 @@ def render():
                         st.info(f"Fara date import pentru {trim_t} {an_t}.")
                 else:
                     st.info("Date import pe tari indisponibile.")
-                st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_tari["ts"]})</div></div>', unsafe_allow_html=True)
+                # st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_tari["ts"]})</div></div>', unsafe_allow_html=True)
 
             # ── Evolutie top 5 tari in timp ───────────────────────────────────
             if not df_tari_exp.empty:
@@ -559,7 +559,7 @@ def render():
                     )
                     st.plotly_chart(fig_ev, use_container_width=True,
                                     config={"displayModeBar": False})
-                    st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_tari["ts"]})</div></div>', unsafe_allow_html=True)
+                    # st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_tari["ts"]})</div></div>', unsafe_allow_html=True)
 
     # ── TAB PRODUSE NCM ───────────────────────────────────────────────────────
     with tab_prod:
@@ -682,7 +682,7 @@ def render():
                 ))
                 fig_imp_str.update_layout(**_lp(420))
                 st.plotly_chart(fig_imp_str, use_container_width=True, config={"displayModeBar": False})
-                st.markdown(f'<div class="chart-source">Sursa: {sursa_label}</div></div>', unsafe_allow_html=True)
+                # st.markdown(f'<div class="chart-source">Sursa: {sursa_label}</div></div>', unsafe_allow_html=True)
 
             # ── Grad de influenta ───────────────────────────────────────────
             col1, col2 = st.columns(2)
