@@ -284,9 +284,9 @@ def load_from_upload(uploaded_file) -> dict:
 def sursa_badge(result: dict) -> str:
     """Returneaza HTML badge pentru sursa datelor."""
     if result.get("live"):
-        return f'<span style="font-size:10px;background:#E1F5EE;color:#0F6E56;padding:3px 8px;border-radius:3px;border:1px solid #9FE1CB;font-family:monospace">Sursa — {result["sursa"]}</span>'
+        return f'<span style="font-size:10px;background:#E1F5EE;color:#0F6E56;padding:3px 8px;border-radius:3px;border:1px solid #9FE1CB;font-family:monospace">Sursa {result["sursa"]}</span>'
     else:
-        return f'<span style="font-size:10px;background:#FAEEDA;color:#854F0B;padding:3px 8px;border-radius:3px;border:1px solid #FAC775;font-family:monospace">DEMO — {result["sursa"]}</span>'
+        return f'<span style="font-size:10px;background:#FAEEDA;color:#854F0B;padding:3px 8px;border-radius:3px;border:1px solid #FAC775;font-family:monospace">Ups ceva nu a mers contacteză-l pe Daniel, dacă nu Nicolai va veni in ajutor</span>'
 
 
 

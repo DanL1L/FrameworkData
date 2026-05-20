@@ -80,7 +80,7 @@ def get_comert_ext_bns(ani: list = None) -> dict:
 
     return {"data": pd.DataFrame(), "live": False,
             "sursa": "BNS EXT015000", "ts": ts,
-            "eroare": "API BNS indisponibil — verifica conexiunea"}
+            "eroare": "API BNS indisponibil"}
 
 
 def _parse_ext015000(data: dict) -> pd.DataFrame | None:

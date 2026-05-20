@@ -258,7 +258,7 @@ def bns_fetch(table_path: str, query: dict) -> pd.DataFrame:
         r.raise_for_status()
         return _parse_pxweb(r.json())
     except requests.exceptions.ConnectionError:
-        return pd.DataFrame({"eroare": ["Conexiune esuata — verifica retea/VPN"]})
+        return pd.DataFrame({"eroare": ["Conexiune esuata"]})
     except requests.exceptions.Timeout:
         return pd.DataFrame({"eroare": ["Timeout dupa 15s — API BNS lent"]})
     except requests.exceptions.HTTPError as e:
