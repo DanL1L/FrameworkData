@@ -225,7 +225,7 @@ def inject_styles():
     }
     .stTabs [aria-selected="true"] {
         color: #185FA5 !important;
-        border-bottom: 2px solid #185FA5 !important;
+        border-bottom: 2px solid #d2d91a !important;
         font-weight: 500 !important;
     }
 
