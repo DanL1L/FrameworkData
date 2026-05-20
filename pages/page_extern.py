@@ -24,6 +24,9 @@ def render():
 
     if df_ext.empty:
         st.warning(f"Date BNS indisponibile: {res_ext.get('eroare','')}")
+        if st.button("Reincarcă date comerț", key="reload_ext_main"):
+            get_comert_ext_bns.clear()
+            st.rerun()
         return
 
     # Filtrare date Total (fara defalcare pe grupe)
@@ -651,42 +654,35 @@ def render():
             sursa_label = f"BNS  ({res_prod['ts']})"
 
             # ── Structura pe sectiuni ────────────────────────────────────────
-            st.markdown(f'<div class="chart-card"><div class="chart-card-title">Structura Export si Import pe sectiuni NCM — {per_label} (mil. USD)</div>', unsafe_allow_html=True)
-            df_str = merged.sort_values("export_mil_usd", ascending=False).head(15)
-            lbl_str = df_str["sectiune_label"].str.replace(r"^[IVXLC]+\.\s*", "", regex=True).str[:35]
+            col_exp_str, col_imp_str = st.columns(2)
 
-            fig_str = go.Figure()
-            fig_str.add_trace(go.Bar(
-                name="Export", y=lbl_str.tolist(), x=df_str["export_mil_usd"].tolist(),
-                orientation="h", marker_color="#534AB7", opacity=0.90,
-                hovertemplate="<b>%{y}</b> Export: %{x:,.1f} mil.<extra></extra>",
-            ))
-            fig_str.add_trace(go.Bar(
-                name="Import", y=lbl_str.tolist(), x=df_str["import_mil_usd"].tolist(),
-                orientation="h", marker_color="#E24B4A", opacity=0.70,
-                hovertemplate="<b>%{y}</b> Import: %{x:,.1f} mil.<extra></extra>",
-            ))
-            fig_str.update_layout(
-                **{
-                    **_lp(420),
-                    "barmode": "group",
-                    "legend": dict(
-                        orientation="h",
-                        y=1.15,   # <- mai sus decât 1.03
-                        x=0,
-                        font=dict(size=10),
-                        bgcolor="rgba(0,0,0,0)"
-                    ),
-                    "margin": dict(t=80),  # <- mai mult spațiu sus
-                    "yaxis": dict(
-                        showgrid=False,
-                        tickfont=dict(size=9),
-                        autorange="reversed"
-                    ),
-                }
-            )
-            st.plotly_chart(fig_str, use_container_width=True, config={"displayModeBar": False})
-            st.markdown(f'<div class="chart-source">Sursa: {sursa_label}</div></div>', unsafe_allow_html=True)
+            df_exp_str = merged.dropna(subset=["export_mil_usd"]).sort_values("export_mil_usd", ascending=True).tail(15)
+            lbl_exp_str = df_exp_str["sectiune_label"].str.replace(r"^[IVXLC]+\.\s*", "", regex=True).str[:35]
+
+            df_imp_str = merged.dropna(subset=["import_mil_usd"]).sort_values("import_mil_usd", ascending=True).tail(15)
+            lbl_imp_str = df_imp_str["sectiune_label"].str.replace(r"^[IVXLC]+\.\s*", "", regex=True).str[:35]
+
+            with col_exp_str:
+                st.markdown(f'<div class="chart-card"><div class="chart-card-title">Export pe sectiuni NCM — {per_label} (mil. USD)</div>', unsafe_allow_html=True)
+                fig_exp_str = go.Figure(go.Bar(
+                    y=lbl_exp_str.tolist(), x=df_exp_str["export_mil_usd"].tolist(),
+                    orientation="h", marker_color="#534AB7", opacity=0.90,
+                    hovertemplate="<b>%{y}</b>: %{x:,.1f} mil.<extra></extra>",
+                ))
+                fig_exp_str.update_layout(**_lp(420))
+                st.plotly_chart(fig_exp_str, use_container_width=True, config={"displayModeBar": False})
+                st.markdown(f'<div class="chart-source">Sursa: {sursa_label}</div></div>', unsafe_allow_html=True)
+
+            with col_imp_str:
+                st.markdown(f'<div class="chart-card"><div class="chart-card-title">Import pe sectiuni NCM — {per_label} (mil. USD)</div>', unsafe_allow_html=True)
+                fig_imp_str = go.Figure(go.Bar(
+                    y=lbl_imp_str.tolist(), x=df_imp_str["import_mil_usd"].tolist(),
+                    orientation="h", marker_color="#E24B4A", opacity=0.85,
+                    hovertemplate="<b>%{y}</b>: %{x:,.1f} mil.<extra></extra>",
+                ))
+                fig_imp_str.update_layout(**_lp(420))
+                st.plotly_chart(fig_imp_str, use_container_width=True, config={"displayModeBar": False})
+                st.markdown(f'<div class="chart-source">Sursa: {sursa_label}</div></div>', unsafe_allow_html=True)
 
             # ── Grad de influenta ───────────────────────────────────────────
             col1, col2 = st.columns(2)
@@ -759,6 +755,9 @@ def render():
 
         if df_ind.empty:
             st.warning(f"Date indici indisponibile: {res_indici.get('eroare','')}")
+            if st.button("Reincarcă", key="reload_indici"):
+                get_indici_comert_bns.clear()
+                st.rerun()
         else:
             if not res_indici["live"]:
                 st.warning(f"Date offline · {res_indici.get('eroare','')}")
