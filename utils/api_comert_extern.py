@@ -66,6 +66,7 @@ def get_comert_ext_bns(ani: list = None) -> dict:
         "response": {"format": "json"},
     }
 
+    err_msg = ""
     try:
         r = requests.post(f"{BNS_BASE}/{_EXT015000}",
                           headers=HEADERS, data=json.dumps(query), timeout=TIMEOUT)
@@ -75,12 +76,15 @@ def get_comert_ext_bns(ani: list = None) -> dict:
                 return {"data": df, "live": True,
                         "sursa": "BNS EXT015000 — live API",
                         "ts": ts, "eroare": None}
-    except Exception:
-        pass
+            err_msg = f"parse esuat (HTTP 200, rows={len(r.json().get('data', []))})"
+        else:
+            err_msg = f"HTTP {r.status_code}"
+    except Exception as e:
+        err_msg = f"{type(e).__name__}: {e}"
 
     return {"data": pd.DataFrame(), "live": False,
             "sursa": "BNS EXT015000", "ts": ts,
-            "eroare": "API BNS indisponibil"}
+            "eroare": f"EXT015000: {err_msg}"}
 
 
 def _parse_ext015000(data: dict) -> pd.DataFrame | None:
@@ -321,6 +325,7 @@ def get_indici_comert_bns(ani: list = None) -> dict:
         "response": {"format": "json"},
     }
 
+    err_msg = ""
     try:
         r = requests.post(f"{BNS_BASE}/{_EXT020100}",
                           headers=HEADERS, data=json.dumps(query), timeout=TIMEOUT)
@@ -330,12 +335,15 @@ def get_indici_comert_bns(ani: list = None) -> dict:
                 return {"data": df, "live": True,
                         "sursa": "BNS EXT020100 — live API",
                         "ts": ts, "eroare": None}
-    except Exception:
-        pass
+            err_msg = f"parse esuat (HTTP 200, rows={len(r.json().get('data',[]))})"
+        else:
+            err_msg = f"HTTP {r.status_code}"
+    except Exception as e:
+        err_msg = f"{type(e).__name__}: {e}"
 
     return {"data": pd.DataFrame(), "live": False,
             "sursa": "BNS EXT020100", "ts": ts,
-            "eroare": "API BNS indisponibil"}
+            "eroare": f"EXT020100: {err_msg}"}
 
 
 def _parse_ext020100(data: dict) -> pd.DataFrame | None:

@@ -542,6 +542,242 @@ def _normalizeaza_pop_gen(df: pd.DataFrame) -> pd.DataFrame | None:
         return None
 
 
+# ── 5. Salarii trimestriale BNS (SAL010) ─────────────────────────────────────
+
+_SAL010_PATHS = [
+    "40%20Statistica%20economica/11%20SAL/SAL010/serii%20trimestriale/SAL010.px",
+    "40%20Statistica%20economica/11%20SAL/SAL010/SAL010.px",
+    "SocEc/FM/TFM08/SAL010.px",
+    "SocEc/FM/SAL010/SAL010.px",
+]
+
+_TRIM_MAP_SOC = {
+    "I": "T1", "II": "T2", "III": "T3", "IV": "T4", "I-IV": "Anual",
+    "0": "T1", "1":  "T2", "2":  "T3", "3":  "T4", "4":    "Anual",
+    "Trimestrul I": "T1", "Trimestrul II": "T2",
+    "Trimestrul III": "T3", "Trimestrul IV": "T4",
+}
+
+ANI_TRIM_REF = [str(a) for a in range(2018, 2026)]
+
+_FALLBACK_SAL_TRIM = {
+    "an":              [2019, 2020, 2021, 2022, 2023, 2024],
+    "salariu_mediu_mdl": [6468, 7207, 8976, 11582, 13603, 15849],
+}
+
+_SAL020_PATHS = [
+    "40%20Statistica%20economica/11%20SAL/SAL020/serii%20trimestriale/SAL020.px",
+    "40%20Statistica%20economica/11%20SAL/SAL020/SAL020.px",
+    "SocEc/FM/TFM01/SAL020.px",
+    "SocEc/FM/SAL020/SAL020.px",
+]
+
+_FALLBACK_OCC_TRIM = {
+    "an":              [2019, 2020, 2021, 2022, 2023, 2024],
+    "rata_somaj":      [4.1,  3.8,  3.5,  3.2,  3.1,  2.9],
+    "rata_ocupare":    [40.8, 39.3, 39.8, 40.2, 40.6, 40.4],
+    "pop_ocupata_mii": [824.0, 793.7, 798.6, 808.2, 812.4, 805.1],
+}
+
+
+def _post_social(path: str, payload: dict) -> dict | None:
+    try:
+        r = requests.post(f"{BNS_BASE}/{path}", headers=HEADERS,
+                          data=json.dumps(payload), timeout=TIMEOUT)
+        if r.status_code == 200:
+            return r.json()
+    except Exception:
+        pass
+    return None
+
+
+def _raw_social(data: dict) -> pd.DataFrame | None:
+    if not isinstance(data, dict) or "columns" not in data or "data" not in data:
+        return None
+    try:
+        cols = [c["text"] for c in data["columns"]]
+        rows = [item["key"] + item["values"] for item in data["data"]]
+        if not rows:
+            return None
+        df = pd.DataFrame(rows, columns=cols)
+        null_vals = {"..", "...", "-", "n/a", "", "N/A"}
+        df.iloc[:, -1] = df.iloc[:, -1].apply(
+            lambda v: None if str(v).strip() in null_vals else v
+        )
+        df.iloc[:, -1] = pd.to_numeric(df.iloc[:, -1], errors="coerce")
+        return df
+    except Exception:
+        return None
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def get_salarii_trim_bns(ani: list = None) -> dict:
+    """
+    Castigul salarial mediu lunar brut — date trimestriale BNS SAL010.
+
+    Returneaza:
+      {"data": DataFrame[an, trim, trim_label, salariu_mediu_mdl],
+       "live": bool, "ts": str, "eroare": str|None}
+    """
+    ani = ani or ANI_TRIM_REF
+    ts  = datetime.now().strftime("%d.%m.%Y %H:%M")
+
+    payload = {
+        "query": [
+            {"code": "Ani",       "selection": {"filter": "item", "values": ani}},
+            {"code": "Trimestre", "selection": {"filter": "all",  "values": []}},
+        ],
+        "response": {"format": "json"},
+    }
+
+    for path in _SAL010_PATHS:
+        data = _post_social(path, payload)
+        df_raw = _raw_social(data)
+        if df_raw is not None:
+            result = _parse_sal_trim(df_raw)
+            if result is not None and not result.empty:
+                return {"data": result, "live": True, "ts": ts, "eroare": None}
+
+    df_fb = pd.DataFrame(_FALLBACK_SAL_TRIM)
+    df_fb = df_fb[df_fb["an"].astype(str).isin(ani)].reset_index(drop=True)
+    return {"data": df_fb, "live": False, "ts": ts,
+            "eroare": "API BNS SAL010 indisponibil — date de referinta"}
+
+
+def _parse_sal_trim(df: pd.DataFrame) -> pd.DataFrame | None:
+    if df is None or df.empty:
+        return None
+    try:
+        val_col = df.columns[-1]
+        an_col  = next((c for c in df.columns if c.lower() in ("ani", "an")), None)
+        tr_col  = next((c for c in df.columns if "trim" in c.lower()), None)
+
+        if an_col is None:
+            return None
+
+        df = df.copy()
+        df[an_col]  = pd.to_numeric(df[an_col], errors="coerce")
+        df[val_col] = pd.to_numeric(df[val_col], errors="coerce")
+
+        # Daca exista dimensiune de activitate/total, filtreaza totalul
+        other_cols = [c for c in df.columns if c not in {val_col, an_col, tr_col} and c]
+        if other_cols:
+            act_col = other_cols[0]
+            # pastreaza doar randul "Total" sau primul indicator
+            totals = df[df[act_col].str.lower().str.contains("total|total general", na=False)]
+            if not totals.empty:
+                df = totals
+
+        result = df[[an_col] + ([tr_col] if tr_col else []) + [val_col]].copy()
+        result = result.rename(columns={an_col: "an", val_col: "salariu_mediu_mdl"})
+        if tr_col:
+            result = result.rename(columns={tr_col: "trim"})
+            result["trim_label"] = result["trim"].apply(
+                lambda x: _TRIM_MAP_SOC.get(str(x).strip(), str(x).strip())
+            )
+
+        return result.dropna(subset=["salariu_mediu_mdl"]).sort_values(
+            ["an"] + (["trim"] if "trim" in result.columns else [])
+        ).reset_index(drop=True)
+    except Exception:
+        return None
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def get_ocupare_trim_bns(ani: list = None) -> dict:
+    """
+    Piata muncii — date trimestriale BNS SAL020.
+    Rata somaj, rata ocupare, populatie ocupata.
+
+    Returneaza:
+      {"data": DataFrame[an, trim, trim_label, rata_somaj, rata_ocupare, pop_ocupata_mii],
+       "live": bool, "ts": str, "eroare": str|None}
+    """
+    ani = ani or ANI_TRIM_REF
+    ts  = datetime.now().strftime("%d.%m.%Y %H:%M")
+
+    payload = {
+        "query": [
+            {"code": "Indicatori", "selection": {"filter": "all", "values": []}},
+            {"code": "Ani",        "selection": {"filter": "item", "values": ani}},
+            {"code": "Trimestre",  "selection": {"filter": "all",  "values": []}},
+        ],
+        "response": {"format": "json"},
+    }
+
+    for path in _SAL020_PATHS:
+        data = _post_social(path, payload)
+        df_raw = _raw_social(data)
+        if df_raw is not None:
+            result = _parse_occ_trim(df_raw)
+            if result is not None and not result.empty:
+                return {"data": result, "live": True, "ts": ts, "eroare": None}
+
+    df_fb = pd.DataFrame(_FALLBACK_OCC_TRIM)
+    df_fb = df_fb[df_fb["an"].astype(str).isin(ani)].reset_index(drop=True)
+    return {"data": df_fb, "live": False, "ts": ts,
+            "eroare": "API BNS SAL020 indisponibil — date de referinta"}
+
+
+def _parse_occ_trim(df: pd.DataFrame) -> pd.DataFrame | None:
+    if df is None or df.empty:
+        return None
+    try:
+        val_col = df.columns[-1]
+        an_col  = next((c for c in df.columns if c.lower() in ("ani", "an")), None)
+        tr_col  = next((c for c in df.columns if "trim" in c.lower()), None)
+        ind_col = next(
+            (c for c in df.columns
+             if c not in {val_col, an_col, tr_col}
+             and any(kw in c.lower() for kw in ["indicator", "tip", "rata"])),
+            next((c for c in df.columns if c not in {val_col, an_col, tr_col} and c), None)
+        )
+
+        if an_col is None:
+            return None
+
+        df = df.copy()
+        df[an_col]  = pd.to_numeric(df[an_col], errors="coerce")
+        df[val_col] = pd.to_numeric(df[val_col], errors="coerce")
+
+        if ind_col:
+            idx = [an_col] + ([tr_col] if tr_col else [])
+            pivot = df.pivot_table(index=idx, columns=ind_col, values=val_col, aggfunc="first")
+            pivot = pivot.reset_index()
+            pivot.columns.name = None
+
+            rename = {an_col: "an"}
+            for c in pivot.columns:
+                cl = str(c).lower()
+                if "somaj" in cl or "șomaj" in cl or "unemploy" in cl:
+                    rename[c] = "rata_somaj"
+                elif "ocup" in cl:
+                    rename[c] = "rata_ocupare"
+                elif "populat" in cl or "mii pers" in cl:
+                    rename[c] = "pop_ocupata_mii"
+            pivot = pivot.rename(columns=rename)
+        else:
+            pivot = df.rename(columns={an_col: "an", val_col: "rata_somaj"})
+            if tr_col:
+                pivot = pivot.rename(columns={tr_col: "trim"})
+
+        if tr_col and tr_col in pivot.columns:
+            pivot = pivot.rename(columns={tr_col: "trim"})
+            pivot["trim_label"] = pivot["trim"].apply(
+                lambda x: _TRIM_MAP_SOC.get(str(x).strip(), str(x).strip())
+            )
+        elif "trim" in pivot.columns:
+            pivot["trim_label"] = pivot["trim"].apply(
+                lambda x: _TRIM_MAP_SOC.get(str(x).strip(), str(x).strip())
+            )
+
+        return pivot.sort_values(
+            ["an"] + (["trim"] if "trim" in pivot.columns else [])
+        ).reset_index(drop=True)
+    except Exception:
+        return None
+
+
 # ── Status test ───────────────────────────────────────────────────────────────
 
 def test_social_api() -> dict:

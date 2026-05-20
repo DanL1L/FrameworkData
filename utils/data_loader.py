@@ -1,6 +1,6 @@
 """
 Data Loader — strat unificat de date
-Prioritate: (1) fisier upload → (2) API live → (3) date demo
+Prioritate: (1) fisier upload → (2) API live
 
 Toate paginile dashboardului cer date exclusiv prin acest modul.
 """
