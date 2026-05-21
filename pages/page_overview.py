@@ -7,7 +7,7 @@ from utils.state import page_header, kpi_card, kpi_row
 from utils.data_loader import sursa_badge
 from utils.api_bns import get_pib_sinteza
 from utils.api_bns_scraper import get_indicatori_cheie
-from utils.api_comert_extern import get_comert_ext_bns
+from utils.api_comert_extern import get_comert_ext_bns, get_comert_ytd_bns
 from data.demo_data import (
     YEARS_STR, export_vals, import_vals,
     pib_real_growth, prog_years, prog_medd, prog_imf, prog_wb,
@@ -119,6 +119,9 @@ def render():
     #     st.caption(f"{result_kpi['eroare']}")
     # st.markdown("")
 
+    # ── Export / Import YTD din BNS (prioritate maxima) ──────────────────────
+    res_ytd = get_comert_ytd_bns()
+
     # ── Construieste grila de 8 carduri ordonata ──────────────────────────────
     # Slot-uri: [0..7], None = card gol (nu a fost gasit indicatorul)
     grila = [None] * 8
@@ -134,6 +137,23 @@ def render():
                 "pozitiv": _is_pozitiv(ind["valoare"], slot),
             }
 
+    # Suprascrie Export/Import cu date BNS YTD daca sunt disponibile
+    if res_ytd["live"]:
+        grila[6] = {
+            "titlu":    "Export marfuri",
+            "valoare":  f"{res_ytd['exp_delta']:+,.0f} mil. EUR",
+            "perioada": f"{res_ytd['exp_pct']:+.1f}% · {res_ytd['perioada']}",
+            "color":    _SLOT_COLOR[6],
+            "pozitiv":  res_ytd["exp_delta"] > 0,
+        }
+        grila[7] = {
+            "titlu":    "Import marfuri",
+            "valoare":  f"{res_ytd['imp_delta']:+,.0f} mil. EUR",
+            "perioada": f"{res_ytd['imp_pct']:+.1f}% · {res_ytd['perioada']}",
+            "color":    _SLOT_COLOR[7],
+            "pozitiv":  True,
+        }
+
     # Fallback pentru slot-uri goale (indicatorul nu a fost scraped)
     _FALLBACK_SLOT = {
         0: ("PIB",                "+2,4%",        "Anul 2025 / Anul 2024"),
@@ -142,8 +162,8 @@ def render():
         3: ("Productia agricola", "+8,5%",        "ian.-mar. 2026"),
         4: ("Rata somajului",     "2,9%",         "Trim. IV 2025"),
         5: ("Salariul mediu",     "16 355,1 lei", "Trim. IV 2025"),
-        6: ("Export",             "+7,8%",        "feb. 2026 / ian. 2026"),
-        7: ("Import",             "+17,7%",       "feb. 2026 / ian. 2026"),
+        6: ("Export",             "+10,2%",       "ian.-mar. 2026 / ian.-mar. 2025"),
+        7: ("Import",             "+12,7%",       "ian.-mar. 2026 / ian.-mar. 2025"),
     }
     for slot, (titlu, valoare, perioada) in _FALLBACK_SLOT.items():
         if grila[slot] is None:
@@ -262,7 +282,7 @@ def render():
         # st.markdown(f'<div class="chart-source">Sursa: {sursa_lbl}</div></div>', unsafe_allow_html=True)
 
     with col4:
-        st.markdown('<div class="chart-card"><div class="chart-card-title">Export vs Import (mil. USD)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-card"><div class="chart-card-title">Export vs Import (mil. EUR)</div>', unsafe_allow_html=True)
         fig4 = go.Figure()
         if not df_anual.empty:
             ani_str   = df_anual["an"].astype(str).tolist()
@@ -276,13 +296,13 @@ def render():
                 name="Export", x=ani_str, y=exp_list,
                 marker_color="#1D9E75",
                 marker_opacity=marker_opacity_exp,
-                hovertemplate="Export <b>%{x}</b>: %{y:,.0f} mil. USD<extra></extra>",
+                hovertemplate="Export <b>%{x}</b>: %{y:,.0f} mil. EUR<extra></extra>",
             ))
             fig4.add_trace(go.Bar(
                 name="Import", x=ani_str, y=imp_list,
                 marker_color="#E24B4A",
                 marker_opacity=marker_opacity_imp,
-                hovertemplate="Import <b>%{x}</b>: %{y:,.0f} mil. USD<extra></extra>",
+                hovertemplate="Import <b>%{x}</b>: %{y:,.0f} mil. EUR<extra></extra>",
             ))
             if n_luni_last < 12:
                 fig4.add_annotation(
