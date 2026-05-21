@@ -343,7 +343,7 @@ def render():
             if partial_note:
                 st.caption(partial_note)
             # ── Grafic 3: Stacked bar cheltuieli pe clasificatia economica ────
-            st.markdown('<div class="chart-card"><div class="chart-card-title">Structura cheltuielilor bugetare — clasificatie economica (mil. lei)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-card"><div class="chart-card-title">Structura cheltuielilor bugetare, clasificatie economica (mil. lei)</div>', unsafe_allow_html=True)
 
             COL_CHELT_EC = [
                 ("Cheltuieli de personal", "#0D2B6B"),
@@ -408,7 +408,7 @@ def render():
                       and df_fan[c].sum() > 0]
 
             if col_fn:
-                st.markdown('<div class="chart-card"><div class="chart-card-title">Structura cheltuielilor — clasificatie functionala (mil. lei)</div>', unsafe_allow_html=True)
+                st.markdown('<div class="chart-card"><div class="chart-card-title">Structura cheltuielilor, clasificatie functionala (mil. lei)</div>', unsafe_allow_html=True)
                 PALETTE_FC = ["#0D2B6B","#185FA5","#2D6EC8","#1D9E75","#0F6E56",
                               "#854F0B","#534AB7","#993556","#888780","#E24B4A"]
                 ani_fc_ok  = [a for a in ani_vc if a in df_fan.index]

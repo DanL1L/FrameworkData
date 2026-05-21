@@ -141,7 +141,7 @@ PALETTE = ["#185FA5","#1D9E75","#854F0B","#534AB7","#993556",
 def render():
     page_header(
         "Sectorul Real",
-        "PIB, industrie, agricultura, comert, transport · 2010–2024",
+        "PIB, industrie, agricultura, comert, transport · 2010–2025",
         "BNS — Conturi nationale",
         "green"
     )

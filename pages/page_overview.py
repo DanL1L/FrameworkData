@@ -330,7 +330,7 @@ def render():
     live_str   = "live" if kpi_live else "fallback"
     st.markdown(
         f'<p style="font-size:10px;color:#b4b2a9;font-family:IBM Plex Mono,monospace">'
-        f'Indicatori cheie: statistica.gov.md ({live_str}) · actualizat: {ts_scraper} · '
+        f'Sursa de date: statistica.gov.md ({live_str}) · actualizat: {ts_scraper} · '
         f'BNS  '
         f'Platforma MEDD — Directia Analiza si Prognoza Macroeconomica.</p>',
         unsafe_allow_html=True

@@ -138,7 +138,7 @@ def render():
         df_5ani = df_anual_total.sort_values("an").tail(5)
         ani_5 = df_5ani["an"].astype(str).tolist()
 
-        st.markdown('<div class="chart-card"><div class="chart-card-title">Comert exterior anual — ultimii 5 ani (mil. USD)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-card"><div class="chart-card-title">Comert exterior anual (mil. USD)</div>', unsafe_allow_html=True)
         fig_a = go.Figure()
         fig_a.add_trace(go.Bar(
             name="Import", x=ani_5, y=df_5ani["import_"].tolist(),
@@ -218,7 +218,7 @@ def render():
         # st.markdown(f'<div class="chart-source">Sursa: BNS EXT015000 ({res_ext["ts"]})</div></div>', unsafe_allow_html=True)
 
         # Export pe grupe de tari (luna curenta)
-        st.markdown('<div class="chart-card"><div class="chart-card-title">Structura Export pe grupe de tari — ultima luna disponibila (mil. USD)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-card"><div class="chart-card-title">Structura Export pe grupe de tari, ultima luna disponibila (mil. USD)</div>', unsafe_allow_html=True)
         df_grupe_last = df_ext[
             (df_ext["an"] == int(last["an"])) &
             (df_ext["luna_nr"] == int(last["luna_nr"])) &
@@ -371,7 +371,7 @@ def render():
         # st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_ext["ts"]})</div></div>', unsafe_allow_html=True)
 
         # Evolutie lunara in anul selectat, pe grupe
-        st.markdown(f'<div class="chart-card"><div class="chart-card-title">Evolutie lunara {tip_g} pe grupe de tari — {an_g} (mil. USD)</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="chart-card"><div class="chart-card-title">Evolutie lunara {tip_g} pe grupe de tari, {an_g} (mil. USD)</div>', unsafe_allow_html=True)
         df_luna_an = df_grupe[df_grupe["an"] == an_g].sort_values("luna_nr")
         LUNI_SCURTE = ["Ian","Feb","Mar","Apr","Mai","Iun","Iul","Aug","Sep","Oct","Nov","Dec"]
         if not df_luna_an.empty:
@@ -533,7 +533,7 @@ def render():
                     )
                     df_ev = df_exp_anual[df_exp_anual["tara"].isin(top5_exp)].sort_values("an")
 
-                    st.markdown('<div class="chart-card"><div class="chart-card-title">Evolutie anuala Export — Top 5 tari partenere (mil. USD)</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="chart-card"><div class="chart-card-title">Evolutie anuala Export, Top 5 tari partenere (mil. USD)</div>', unsafe_allow_html=True)
                     fig_ev = go.Figure()
                     EV_COLORS = ["#185FA5","#1D9E75","#854F0B","#534AB7","#E24B4A"]
                     for i, tara in enumerate(top5_exp):
@@ -663,7 +663,7 @@ def render():
             lbl_imp_str = df_imp_str["sectiune_label"].str.replace(r"^[IVXLC]+\.\s*", "", regex=True).str[:35]
 
             with col_exp_str:
-                st.markdown(f'<div class="chart-card"><div class="chart-card-title">Export pe sectiuni NCM — {per_label} (mil. USD)</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="chart-card"><div class="chart-card-title">Export pe sectiuni NCM, {per_label} (mil. USD)</div>', unsafe_allow_html=True)
                 fig_exp_str = go.Figure(go.Bar(
                     y=lbl_exp_str.tolist(), x=df_exp_str["export_mil_usd"].tolist(),
                     orientation="h", marker_color="#534AB7", opacity=0.90,
@@ -674,7 +674,7 @@ def render():
                 st.markdown(f'<div class="chart-source">Sursa: {sursa_label}</div></div>', unsafe_allow_html=True)
 
             with col_imp_str:
-                st.markdown(f'<div class="chart-card"><div class="chart-card-title">Import pe sectiuni NCM — {per_label} (mil. USD)</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="chart-card"><div class="chart-card-title">Import pe sectiuni NCM, {per_label} (mil. USD)</div>', unsafe_allow_html=True)
                 fig_imp_str = go.Figure(go.Bar(
                     y=lbl_imp_str.tolist(), x=df_imp_str["import_mil_usd"].tolist(),
                     orientation="h", marker_color="#E24B4A", opacity=0.85,
@@ -692,7 +692,7 @@ def render():
                 (col2, "Import", "influenta_imp"),
             ]:
                 with col_ui:
-                    st.markdown(f'<div class="chart-card"><div class="chart-card-title">Grad de influenta {tip} — {per_label} vs {per_prev_label} (pp)</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="chart-card"><div class="chart-card-title">Grad de influenta {tip}, {per_label} vs {per_prev_label} (pp)</div>', unsafe_allow_html=True)
                     df_inf = merged.dropna(subset=[col_inf]).sort_values(col_inf)
                     df_inf = df_inf[df_inf["sectiune"] != "Total"]
                     lbl_inf = df_inf["sectiune_label"].str.replace(r"^[IVXLC]+\.\s*", "", regex=True).str[:35]
@@ -712,10 +712,10 @@ def render():
                         yaxis=dict(showgrid=False, tickfont=dict(size=9)),
                     )
                     st.plotly_chart(fig_inf, use_container_width=True, config={"displayModeBar": False})
-                    st.markdown(f'<div class="chart-source">Sursa: {sursa_label}</div></div>', unsafe_allow_html=True)
+                    # st.markdown(f'<div class="chart-source">Sursa: {sursa_label}</div></div>', unsafe_allow_html=True)
 
             # ── Rata de crestere ────────────────────────────────────────────
-            st.markdown(f'<div class="chart-card"><div class="chart-card-title">Rata de crestere pe sectiuni NCM — {per_label} vs {per_prev_label} (%)</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="chart-card"><div class="chart-card-title">Rata de crestere pe sectiuni NCM, {per_label} vs {per_prev_label} (%)</div>', unsafe_allow_html=True)
             df_rata = merged.dropna(subset=["rata_exp", "rata_imp"])
             df_rata = df_rata[df_rata["sectiune"] != "Total"].sort_values("rata_exp", ascending=False)
             lbl_rata = df_rata["sectiune_label"].str.replace(r"^[IVXLC]+\.\s*", "", regex=True).str[:35]
@@ -815,13 +815,13 @@ def render():
                               title="indice (an prec. = 100)"),
             })
             st.plotly_chart(fig_iv, use_container_width=True, config={"displayModeBar": False})
-            st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_indici["ts"]})</div></div>', unsafe_allow_html=True)
+            # st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_indici["ts"]})</div></div>', unsafe_allow_html=True)
 
             # ── Indici valoare unitara + volum fizic ──────────────────────────
             col1, col2 = st.columns(2)
 
             with col1:
-                st.markdown('<div class="chart-card"><div class="chart-card-title">Indicii valorii unitare — preturi (an prec. = 100)</div>', unsafe_allow_html=True)
+                st.markdown('<div class="chart-card"><div class="chart-card-title">Indicii valorii unitare, preturi (an prec. = 100)</div>', unsafe_allow_html=True)
                 fig_vu = go.Figure()
                 fig_vu.add_trace(go.Scatter(
                     name="Export", x=TRIM_L, y=df_exp["ind_val_unitara"].tolist(),
@@ -841,10 +841,10 @@ def render():
                                   title="indice"),
                 })
                 st.plotly_chart(fig_vu, use_container_width=True, config={"displayModeBar": False})
-                st.markdown(f'<div class="chart-source">Sursa: BNS </div></div>', unsafe_allow_html=True)
+                # st.markdown(f'<div class="chart-source">Sursa: BNS </div></div>', unsafe_allow_html=True)
 
             with col2:
-                st.markdown('<div class="chart-card"><div class="chart-card-title">Indicii volumului fizic — cantitati (an prec. = 100)</div>', unsafe_allow_html=True)
+                st.markdown('<div class="chart-card"><div class="chart-card-title">Indicii volumului fizic, cantitati (an prec. = 100)</div>', unsafe_allow_html=True)
                 fig_vf = go.Figure()
                 fig_vf.add_trace(go.Scatter(
                     name="Export", x=TRIM_L, y=df_exp["ind_volum"].tolist(),
@@ -864,7 +864,7 @@ def render():
                                   title="indice"),
                 })
                 st.plotly_chart(fig_vf, use_container_width=True, config={"displayModeBar": False})
-                st.markdown(f'<div class="chart-source">Sursa: BNS </div></div>', unsafe_allow_html=True)
+                # st.markdown(f'<div class="chart-source">Sursa: BNS </div></div>', unsafe_allow_html=True)
 
             # ── Termenii de schimb (terms of trade) ──────────────────────────
             df_tot = df_exp[["an", "trim_nr", "trim_label", "ind_val_unitara"]].merge(
@@ -875,7 +875,7 @@ def render():
                 df_tot["ind_val_unitara_exp"] / df_tot["ind_val_unitara_imp"] * 100
             ).where(df_tot["ind_val_unitara_imp"].notna() & (df_tot["ind_val_unitara_imp"] != 0))
 
-            st.markdown('<div class="chart-card"><div class="chart-card-title">Termenii de schimb — Ind. val. unitara Export / Import × 100 (>100 = avantaj export)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-card"><div class="chart-card-title">Termenii de schimb, Ind. val. unitara Export / Import × 100 (>100 = avantaj export)</div>', unsafe_allow_html=True)
             vals_tot = df_tot["terms_of_trade"].tolist()
             colors_tot = ["#1D9E75" if v and v >= 100 else "#E24B4A" for v in vals_tot]
             fig_tot = go.Figure()
@@ -955,7 +955,7 @@ def render():
                     "legend": dict(orientation="h", y=1.05, x=0, font=dict(size=10),
                                    bgcolor="rgba(0,0,0,0)")})
                 st.plotly_chart(fig_s1, use_container_width=True, config={"displayModeBar": False})
-                st.markdown('<div class="chart-source">Sursa: Date_Servicii.xlsx — Imp_Exp_Servicii</div></div>', unsafe_allow_html=True)
+                # st.markdown('<div class="chart-source">Sursa: Date_Servicii.xlsx — Imp_Exp_Servicii</div></div>', unsafe_allow_html=True)
 
             with col2:
                 st.markdown('<div class="chart-card"><div class="chart-card-title">Sold comercial servicii trimestrial (mil. USD)</div>', unsafe_allow_html=True)
@@ -968,9 +968,9 @@ def render():
                 fig_s2.add_hline(y=0, line_color="#444441", line_width=1)
                 fig_s2.update_layout(**{**_layout_s(), "showlegend": False})
                 st.plotly_chart(fig_s2, use_container_width=True, config={"displayModeBar": False})
-                st.markdown('<div class="chart-source">Sursa: Date_Servicii.xlsx — Imp_Exp_Servicii</div></div>', unsafe_allow_html=True)
+                # st.markdown('<div class="chart-source">Sursa: Date_Servicii.xlsx — Imp_Exp_Servicii</div></div>', unsafe_allow_html=True)
 
-            st.markdown('<div class="chart-card"><div class="chart-card-title">Export si Import servicii — total anual (mil. USD)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-card"><div class="chart-card-title">Export si Import servicii, total anual (mil. USD)</div>', unsafe_allow_html=True)
             df_anual = df_serv.groupby("an").agg(
                 export_total=("export_servicii_mil_usd", "sum"),
                 import_total=("import_servicii_mil_usd", "sum"),
