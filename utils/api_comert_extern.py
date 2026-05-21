@@ -29,6 +29,9 @@ HEADERS  = {"Content-Type": "application/json", "Accept": "application/json"}
 TIMEOUT  = 15
 ANI_REF  = [str(a) for a in range(2019, 2026)]
 
+_LUNI_ABREV = ["ian", "feb", "mar", "apr", "mai", "iun",
+               "iul", "aug", "sep", "oct", "nov", "dec"]
+
 # ── EXT015000: date lunare export/import/balanta pe grupe de tari ─────────────
 
 _EXT015000 = "40%20Statistica%20economica/21%20EXT/EXT010/serii%20lunare/EXT015000.px"
@@ -85,6 +88,134 @@ def get_comert_ext_bns(ani: list = None) -> dict:
     return {"data": pd.DataFrame(), "live": False,
             "sursa": "BNS EXT015000", "ts": ts,
             "eroare": f"EXT015000: {err_msg}"}
+
+
+_SQ_EUR = "https://statbank.statistica.md/PxWeb/sq/8361a49c-6c49-4ed1-b853-b48b7a3c0eb0"
+# JSON-stat format: size=[Indicatori(3), Grupe(1), Ani(N), Unitate(2), Luni(13)]
+# Unitate 0 = Milioane EURO | Luni 0..11 = Ian..Dec | 12 = Ian-Dec total anual
+
+
+def _parse_jsonstat_ext(d: dict) -> dict | None:
+    """Parseaza JSON-stat BNS → {(ind_idx, an_idx, luna_idx): mil_eur} + ani_list."""
+    vals_raw = d.get("value", [])
+    dims     = d.get("dimension", {})
+    size     = d.get("size", [])
+    if not vals_raw or not dims or len(size) < 5:
+        return None
+
+    # stride[i] = prod(size[i+1..n-1])
+    n       = len(size)
+    strides = [1] * n
+    for i in range(n - 2, -1, -1):
+        strides[i] = strides[i + 1] * size[i + 1]
+
+    ani_labels = list(dims.get("Ani", {}).get("category", {}).get("label", {}).values())
+
+    result = {}
+    for ind in range(size[0]):          # 0=Export, 1=Import
+        for an in range(size[2]):
+            for luna in range(size[4]):
+                if luna == 12:          # luna 12 = total Ian-Dec, o ignoram
+                    continue
+                flat = (ind * strides[0]
+                        + 0   * strides[1]   # grupe=0 Total
+                        + an  * strides[2]
+                        + 0   * strides[3]   # unitate=0 Milioane EURO
+                        + luna)
+                v = vals_raw[flat] if flat < len(vals_raw) else None
+                if v is not None and not (isinstance(v, float) and v != v):
+                    result[(ind, an, luna)] = float(v)
+
+    return {"vals": result, "ani": ani_labels}
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def get_comert_ytd_bns() -> dict:
+    """
+    Calculeaza Export si Import YTD cumulat (ian. – ultima luna disponibila)
+    vs acelasi interval an precedent, in Milioane EURO.
+    Sursa: BNS saved query 8361a49c (JSON-stat).
+
+    Returneaza:
+      {
+        "exp_pct":   float | None,
+        "imp_pct":   float | None,
+        "exp_delta": float | None,   # crestere absoluta, mil. EUR
+        "imp_delta": float | None,
+        "exp_cur":   float | None,   # total YTD, mil. EUR
+        "imp_cur":   float | None,
+        "perioada":  str,            # ex: "ian.-mar. 2026 / ian.-mar. 2025"
+        "luna_max":  int,            # ultima luna cu date, 1-based
+        "an_cur":    int,
+        "live":      bool,
+        "eroare":    str | None,
+      }
+    """
+    an_cur  = datetime.now().year
+    an_prev = an_cur - 1
+    _EMPTY  = {"exp_pct": None, "imp_pct": None, "exp_delta": None, "imp_delta": None,
+               "exp_cur": None, "imp_cur": None, "perioada": "",
+               "luna_max": None, "an_cur": an_cur, "live": False}
+
+    try:
+        r = requests.get(_SQ_EUR, timeout=TIMEOUT)
+        if r.status_code != 200:
+            return {**_EMPTY, "eroare": f"HTTP {r.status_code}"}
+
+        parsed = _parse_jsonstat_ext(r.json())
+        if not parsed:
+            return {**_EMPTY, "eroare": "Parse JSON-stat esuat"}
+
+        vals     = parsed["vals"]
+        ani_list = parsed["ani"]
+
+        try:
+            cur_idx  = ani_list.index(str(an_cur))
+            prev_idx = ani_list.index(str(an_prev))
+        except ValueError:
+            return {**_EMPTY, "eroare": f"Anul {an_cur}/{an_prev} lipseste din API"}
+
+        # Ultima luna cu date pentru Export(0) si Import(1) in anul curent
+        months_exp = {luna for (ind, an, luna) in vals if ind == 0 and an == cur_idx}
+        months_imp = {luna for (ind, an, luna) in vals if ind == 1 and an == cur_idx}
+        common = months_exp & months_imp
+        if not common:
+            return {**_EMPTY, "eroare": "Nu sunt date pentru anul curent"}
+
+        luna_max_0 = max(common)   # 0-based (0=ian, 2=mar, ...)
+
+        # Sume YTD ian. → luna_max_0 inclusiv
+        exp_cur  = sum(vals.get((0, cur_idx,  m), 0.0) for m in range(luna_max_0 + 1))
+        imp_cur  = sum(vals.get((1, cur_idx,  m), 0.0) for m in range(luna_max_0 + 1))
+        exp_prev = sum(vals.get((0, prev_idx, m), 0.0) for m in range(luna_max_0 + 1))
+        imp_prev = sum(vals.get((1, prev_idx, m), 0.0) for m in range(luna_max_0 + 1))
+
+        if not exp_prev or not imp_prev:
+            return {**_EMPTY, "eroare": "Date insuficiente an precedent"}
+
+        exp_pct = (exp_cur / exp_prev - 1) * 100
+        imp_pct = (imp_cur / imp_prev - 1) * 100
+
+        abrev = _LUNI_ABREV[luna_max_0]
+        per   = (f"ian. {an_cur} / ian. {an_prev}" if luna_max_0 == 0
+                 else f"ian.-{abrev}. {an_cur} / ian.-{abrev}. {an_prev}")
+
+        return {
+            "exp_pct":   round(exp_pct, 1),
+            "imp_pct":   round(imp_pct, 1),
+            "exp_delta": round(exp_cur - exp_prev, 1),
+            "imp_delta": round(imp_cur - imp_prev, 1),
+            "exp_cur":   round(exp_cur, 1),
+            "imp_cur":   round(imp_cur, 1),
+            "perioada":  per,
+            "luna_max":  luna_max_0 + 1,
+            "an_cur":    an_cur,
+            "live":      True,
+            "eroare":    None,
+        }
+
+    except Exception as e:
+        return {**_EMPTY, "eroare": str(e)}
 
 
 def _parse_ext015000(data: dict) -> pd.DataFrame | None:
