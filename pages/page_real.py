@@ -505,9 +505,6 @@ def render():
             })
             st.plotly_chart(fig_aqt, use_container_width=True, config={"displayModeBar": False})
             # st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Agricultura</div></div>', unsafe_allow_html=True)
-
-        st.markdown("---")
-
         # ── Recolta principalelor culturi ────────────────────────────────────
         df_cult = res_culturi["data"]
         if not df_cult.empty:
@@ -547,7 +544,7 @@ def render():
                            title="mii tone"),
             )
             st.plotly_chart(fig_cult, use_container_width=True, config={"displayModeBar": False})
-            st.markdown(f'<div class="chart-source">Sursa: BNS ({res_culturi["ts"]})</div></div>', unsafe_allow_html=True)
+            # st.markdown(f'<div class="chart-source">Sursa: BNS ({res_culturi["ts"]})</div></div>', unsafe_allow_html=True)
 
             # Heatmap recolta pe culturi si ani
             st.markdown('<div class="chart-card"><div class="chart-card-title">Recolta pe culturi si ani (mii tone)</div>', unsafe_allow_html=True)
@@ -574,7 +571,7 @@ def render():
                 yaxis=dict(tickfont=dict(size=10), autorange="reversed"),
             )
             st.plotly_chart(fig_hm, use_container_width=True, config={"displayModeBar": False})
-            st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_culturi["ts"]})</div></div>', unsafe_allow_html=True)
+            # st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_culturi["ts"]})</div></div>', unsafe_allow_html=True)
 
         # ── Plantatii pomicole si viticole ───────────────────────────────────
         df_plan = res_plantatii["data"]
@@ -604,7 +601,7 @@ def render():
                                    title="mii tone"),
                     )
                     st.plotly_chart(fig_pom, use_container_width=True, config={"displayModeBar": False})
-                st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_plantatii["ts"]})</div></div>', unsafe_allow_html=True)
+                # st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_plantatii["ts"]})</div></div>', unsafe_allow_html=True)
 
             with col2:
                 st.markdown('<div class="chart-card"><div class="chart-card-title">Recolta plantatii viticole (mii tone)</div>', unsafe_allow_html=True)
@@ -628,7 +625,7 @@ def render():
                                    title="mii tone"),
                     )
                     st.plotly_chart(fig_vit, use_container_width=True, config={"displayModeBar": False})
-                st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_plantatii["ts"]})</div></div>', unsafe_allow_html=True)
+                # st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_plantatii["ts"]})</div></div>', unsafe_allow_html=True)
 
         # ── Productia animala ────────────────────────────────────────────────
         df_anim = res_anim_prod["data"]
