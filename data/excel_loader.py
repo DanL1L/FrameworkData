@@ -129,11 +129,12 @@ def load_monetar() -> dict:
             elif "rata" in cl and "baz" in cl:
                 rename_map[c] = "rata_baza_pct"
 
-            # BAZA MONETARA
-            elif "baz" in cl and "monetar" in cl:
-                rename_map[c] = "baza_monetara_mil_lei"
-
+            # BANI LICHIZI IN CIRCULATIE (MO) — trebuie verificat inaintea "baza monetara"
             elif "bani" in cl or "lichiz" in cl or "(mo)" in cl:
+                rename_map[c] = "bani_lichizi_mo_mil_lei"
+
+            # BAZA MONETARA (agregat mai larg — include rezerve bancare)
+            elif "baz" in cl and "monetar" in cl:
                 rename_map[c] = "baza_monetara_mil_lei"
 
             # CREDITE
