@@ -142,7 +142,7 @@ def render():
     page_header(
         "Sectorul Real",
         "PIB, industrie, agricultura, comert, transport · 2010–2024",
-        "BNS — Conturi nationale · Real.xlsx",
+        "BNS — Conturi nationale",
         "green"
     )
 
@@ -206,11 +206,11 @@ def render():
         kpi_card(f"PIB real {an_last}", f"{pib_gr:+.1f}" if pib_gr else "N/A", "%",
                  f"crestere vs {an_last-1}", pib_gr and pib_gr > 0, "green"),
         kpi_card("Productia industriala",
-                 f"{ind_val/1e3:,.1f}" if ind_val else "N/A", "mld. lei",
-                 f"{ind_chg:+.1f}% vs {an_ind-1}" if ind_chg else "", ind_chg and ind_chg > 0, "green"),
+                 f"{ind_chg:+.1f}" if ind_chg else "N/A", "%",
+                 f"vs {an_ind-1}", ind_chg and ind_chg > 0, "green"),
         kpi_card("Productia agricola",
-                 f"{agr_val/1e3:,.1f}" if agr_val else "N/A", "mld. lei",
-                 f"{agr_chg:+.1f}% vs {an_agr-1}" if agr_chg else "", agr_chg and agr_chg > 0, "green"),
+                 f"{agr_chg:+.1f}" if agr_chg else "N/A", "%",
+                 f"vs {an_agr-1}", agr_chg and agr_chg > 0, "green"),
         kpi_card("Comert interior", "+6.6", "%",
                  "trim. IV 2024 / trim. IV 2023", True, "green"),
     ])
@@ -251,7 +251,7 @@ def render():
                 text=[f"{v:.1f}%" for v in df_gr["Crestere reala (%)"]],
                 textposition="outside",
                 textfont=dict(size=9, color="#444441"),
-                hovertemplate="<b>%{x}</b>: %{y:+.1f}%<extra></extra>",
+                hovertemplate="<b>%{x}</b>: %{y:+.2f}%<extra></extra>",
             ))
             fig2.add_hline(y=0, line_color="#e8e4dc", line_width=1)
             fig2.update_layout(**{**_layout(280), "yaxis": dict(
@@ -279,7 +279,7 @@ def render():
                     name=name,
                     x=df_share["An"].astype(str), y=share.round(1),
                     marker_color=PALETTE[i], opacity=0.9,
-                    hovertemplate=f"<b>{name}</b> %{{x}}: %{{y:.1f}}%<extra></extra>",
+                    hovertemplate=f"<b>{name}</b> %{{x}}: %{{y:.2f}}%<extra></extra>",
                 ))
             fig3.update_layout(**{
                 **_layout(320, legend=True),
@@ -295,9 +295,9 @@ def render():
             st.plotly_chart(fig3, use_container_width=True, config={"displayModeBar": False})
             # st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet PIB</div></div>', unsafe_allow_html=True)
 
-        st.markdown('<div class="chart-card"><div class="chart-card-title">Contributia la cresterea PIB (p.p.) — selecteaza anul</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-card"><div class="chart-card-title">Contributia la cresterea PIB (p.p.)</div>', unsafe_allow_html=True)
         all_years = sorted(df_pib["An"].dropna().unique())
-        sel_yr = st.selectbox("An pentru contributii:", all_years,
+        sel_yr = st.selectbox("Selecteză anul:", all_years,
                               index=len(all_years)-1, key="pib_contrib_yr")
 
         col5, col6 = st.columns(2)
@@ -420,7 +420,7 @@ def render():
             """, unsafe_allow_html=True)
             # st.markdown('<div class="chart-source">Sursa: BNS — Real.xlsx · sheet Industrie</div></div>', unsafe_allow_html=True)
 
-        st.markdown('<div class="chart-card"><div class="chart-card-title">Contributia subramurilor la cresterea industriei prelucrătoare (p.p.) — selecteaza anul</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-card"><div class="chart-card-title">Contributia subramurilor la cresterea industriei prelucrătoare (p.p.)</div>', unsafe_allow_html=True)
         years_prel = sorted(df_prel["An"].dropna().unique())
         sel_ind_yr = st.selectbox("An:", years_prel, index=len(years_prel)-1, key="ind_prel_yr")
         row_prel = df_prel[df_prel["An"] == sel_ind_yr]
@@ -493,7 +493,7 @@ def render():
                         name=name, mode="lines+markers",
                         line=dict(color=color, width=2.5 if dash=="dash" else 1.8, dash=dash),
                         marker=dict(size=4),
-                        hovertemplate=f"<b>{name}</b> %{{x}}: %{{y:.1f}}%<extra></extra>",
+                        hovertemplate=f"<b>{name}</b> %{{x}}: %{{y:.2f}}%<extra></extra>",
                     ))
             fig_aqt.add_hline(y=100, line_dash="dot", line_color="#888780", line_width=1,
                               annotation_text="100%", annotation_font_size=9)
@@ -534,7 +534,7 @@ def render():
                         mode="lines+markers",
                         line=dict(color=CULT_COLORS.get(cultura, "#888780"), width=2),
                         marker=dict(size=5),
-                        hovertemplate=f"<b>{cultura} %{{x}}</b>: %{{y:,.1f}} mii tone<extra></extra>",
+                        hovertemplate=f"<b>{cultura} %{{x}}</b>: %{{y:,.2f}} mii tone<extra></extra>",
                     ))
             fig_cult.update_layout(
                 height=320, paper_bgcolor="white", plot_bgcolor="white",
@@ -562,7 +562,7 @@ def render():
                 y=pivot_cult.index.tolist(),
                 colorscale=[[0, "#FFF3E0"], [0.5, "#FFB74D"], [1, "#1D9E75"]],
                 showscale=True,
-                hovertemplate="<b>%{y} %{x}</b>: %{z:,.1f} mii tone<extra></extra>",
+                hovertemplate="<b>%{y} %{x}</b>: %{z:,.2f} mii tone<extra></extra>",
                 texttemplate="%{z:.0f}",
                 textfont=dict(size=9),
             ))
@@ -593,7 +593,7 @@ def render():
                         marker_color=colors_pom, opacity=0.88,
                         text=[f"{v:.0f}" for v in df_pom["recolta_mii_tone"]],
                         textposition="outside", textfont=dict(size=9),
-                        hovertemplate="<b>%{x}</b>: %{y:,.1f} mii tone<extra></extra>",
+                        hovertemplate="<b>%{x}</b>: %{y:,.2f} mii tone<extra></extra>",
                     ))
                     fig_pom.update_layout(
                         height=280, paper_bgcolor="white", plot_bgcolor="white",
@@ -617,7 +617,7 @@ def render():
                         marker_color=colors_vit, opacity=0.88,
                         text=[f"{v:.0f}" for v in df_vit["recolta_mii_tone"]],
                         textposition="outside", textfont=dict(size=9),
-                        hovertemplate="<b>%{x}</b>: %{y:,.1f} mii tone<extra></extra>",
+                        hovertemplate="<b>%{x}</b>: %{y:,.2f} mii tone<extra></extra>",
                     ))
                     fig_vit.update_layout(
                         height=280, paper_bgcolor="white", plot_bgcolor="white",
@@ -676,7 +676,7 @@ def render():
                             mode="lines+markers",
                             line=dict(color=ANIM_COLORS[produs], width=2.5),
                             marker=dict(size=5),
-                            hovertemplate=f"<b>{produs} %{{x}}</b>: %{{y:,.1f}} mii tone<extra></extra>",
+                            hovertemplate=f"<b>{produs} %{{x}}</b>: %{{y:,.2f}} mii tone<extra></extra>",
                         ))
                 fig_al.update_layout(
                     height=280, paper_bgcolor="white", plot_bgcolor="white",
@@ -702,7 +702,7 @@ def render():
                         marker_color="#E8A823", opacity=0.85,
                         text=[f"{v:.0f}" for v in df_oua["valoare"]],
                         textposition="outside", textfont=dict(size=9),
-                        hovertemplate="<b>%{x}</b>: %{y:,.1f} mln. buc.<extra></extra>",
+                        hovertemplate="<b>%{x}</b>: %{y:,.2f} mln. buc.<extra></extra>",
                     ))
                     fig_oua.update_layout(
                         height=280, paper_bgcolor="white", plot_bgcolor="white",
@@ -731,7 +731,7 @@ def render():
                         mode="lines+markers",
                         line=dict(color=color, width=2.5),
                         marker=dict(size=5),
-                        hovertemplate=f"<b>{specie} %{{x}}</b>: %{{y:,.1f}} mii capete<extra></extra>",
+                        hovertemplate=f"<b>{specie} %{{x}}</b>: %{{y:,.2f}} mii capete<extra></extra>",
                     ))
             fig_efect.update_layout(
                 height=300, paper_bgcolor="white", plot_bgcolor="white",
@@ -798,7 +798,7 @@ def render():
                 ].dropna(subset=["recolta_mii_tone"]).sort_values("recolta_mii_tone", ascending=True)
 
                 if not df_cr_an.empty:
-                    st.markdown(f'<div class="chart-card"><div class="chart-card-title">Recolta {cult_sel} pe {"regiuni" if este_regiune else "raioane"} — {an_reg} (mii tone)</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="chart-card"><div class="chart-card-title">Recolta {cult_sel} pe {"regiuni" if este_regiune else "raioane"}, {an_reg} (mii tone)</div>', unsafe_allow_html=True)
 
                     bar_colors = [REGIUNE_COLOR.get(rp, "#888780") for rp in df_cr_an["regiune_parinte"]]
                     fig_creg = go.Figure(go.Bar(
@@ -810,7 +810,7 @@ def render():
                         text=[f"{v:.1f}" for v in df_cr_an["recolta_mii_tone"]],
                         textposition="outside",
                         textfont=dict(size=9),
-                        hovertemplate="<b>%{y}</b>: %{x:,.1f} mii tone<extra></extra>",
+                        hovertemplate="<b>%{y}</b>: %{x:,.2f} mii tone<extra></extra>",
                     ))
                     h_creg = max(280, len(df_cr_an) * 22)
                     fig_creg.update_layout(
@@ -838,7 +838,7 @@ def render():
                     ].dropna(subset=["recolta_mii_tone"])
 
                     if not df_cr_multi.empty:
-                        st.markdown(f'<div class="chart-card"><div class="chart-card-title">Toate culturile pe regiuni — {an_reg} (mii tone)</div>', unsafe_allow_html=True)
+                        st.markdown(f'<div class="chart-card"><div class="chart-card-title">Toate culturile pe regiuni, {an_reg} (mii tone)</div>', unsafe_allow_html=True)
                         culturi_multi = sorted(df_cr_multi["cultura"].unique().tolist())
                         regiuni_ord   = ["Nord", "Centru", "Sud", "Mun. Chisinau", "UTA Gagauzia"]
                         CULT_COLORS_M = {
@@ -856,7 +856,7 @@ def render():
                                 y=df_c["recolta_mii_tone"].tolist(),
                                 marker_color=CULT_COLORS_M.get(cult, "#888780"),
                                 opacity=0.88,
-                                hovertemplate=f"<b>{cult} %{{x}}</b>: %{{y:,.1f}} mii tone<extra></extra>",
+                                hovertemplate=f"<b>{cult} %{{x}}</b>: %{{y:,.2f}} mii tone<extra></extra>",
                             ))
                         fig_cm.update_layout(
                             height=320, paper_bgcolor="white", plot_bgcolor="white",
@@ -895,7 +895,7 @@ def render():
                         text=[f"{v:.1f}" for v in df_ar_an["mii_capete"]],
                         textposition="outside",
                         textfont=dict(size=9),
-                        hovertemplate="<b>%{y}</b>: %{x:,.1f} mii capete<extra></extra>",
+                        hovertemplate="<b>%{y}</b>: %{x:,.2f} mii capete<extra></extra>",
                     ))
                     h_areg = max(280, len(df_ar_an) * 22)
                     fig_areg.update_layout(
@@ -934,7 +934,7 @@ def render():
             # ── Stacked bar: Amanuntul + Ridicata + linie Total ───────────────
             st.markdown(
                 '<div class="chart-card"><div class="chart-card-title">'
-                'Comert intern trimestrial — structura (mld. lei)'
+                'Comert intern trimestrial, structura (mld. lei)'
                 '</div>',
                 unsafe_allow_html=True
             )
@@ -1028,7 +1028,7 @@ def render():
                               width=2.5 if i == 0 else 1.8,
                               dash=dash_gr[i % len(dash_gr)]),
                     marker=dict(size=4),
-                    hovertemplate=f"{label} <b>%{{x}}</b>: %{{y:+.1f}}%<extra></extra>",
+                    hovertemplate=f"{label} <b>%{{x}}</b>: %{{y:+.2f}}%<extra></extra>",
                 ))
             fig_cg.add_hline(y=0, line_dash="dot", line_color="#e8e4dc", line_width=1)
             fig_cg.update_layout(**{

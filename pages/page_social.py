@@ -19,6 +19,8 @@ from utils.api_social import (
     get_piata_muncii_anual,
     get_populatie_someri_anual,
     get_populatie_gen_anual,
+    get_salarii_trim_bns,
+    get_ocupare_trim_bns,
 )
 
 
@@ -30,9 +32,38 @@ def render():
         "teal"
     )
 
-    # ── Date trimestrale din Excel ────────────────────────────────────────────
+    # ── Date trimestriale: BNS (primar) → Excel (fallback) ───────────────────
+    result_sal_trim = get_salarii_trim_bns()
+    result_occ_trim = get_ocupare_trim_bns()
+    df_sal_trim = result_sal_trim["data"]
+    df_occ_trim = result_occ_trim["data"]
+    bns_trim_live = result_sal_trim["live"] or result_occ_trim["live"]
+
+    # Construim df_q unificat din BNS sau Excel
     result_q = load_social()
-    df_q     = result_q["data"]
+    df_q_excel = result_q["data"]
+
+    if bns_trim_live and not df_sal_trim.empty:
+        # Combina sal_trim + occ_trim pe (an, trim)
+        merge_keys = ["an"] + (["trim"] if "trim" in df_sal_trim.columns else [])
+        if "trim" in df_sal_trim.columns and "trim" in df_occ_trim.columns:
+            df_q = df_sal_trim.merge(df_occ_trim, on=merge_keys, how="outer", suffixes=("", "_occ"))
+            if "trim_label_occ" in df_q.columns:
+                df_q["trim_label"] = df_q["trim_label"].fillna(df_q["trim_label_occ"])
+                df_q = df_q.drop(columns=["trim_label_occ"])
+        else:
+            df_q = df_sal_trim.copy()
+        # Normalizeaza coloane BNS la conventia Excel
+        df_q = df_q.rename(columns={
+            "rata_somaj":      "rata_somaj_pct",
+            "rata_ocupare":    "rata_ocupare_pct",
+            "pop_ocupata_mii": "populatie_ocupata_mii",
+        })
+        df_q = df_q.sort_values(merge_keys).reset_index(drop=True)
+        sursa_trim = "BNS SAL010 + SAL020 (live)"
+    else:
+        df_q = df_q_excel
+        sursa_trim = "Date_Sector_Social.xlsx"
 
     # ── Date anuale din BNS API ───────────────────────────────────────────────
     result_sal = get_salarii_anual()
@@ -108,8 +139,9 @@ def render():
     ])
 
     # ── Tabs ──────────────────────────────────────────────────────────────────
+    trim_tab_label = "Date trimestriale (BNS)" if bns_trim_live else "Date trimestriale"
     tab_an, tab_trim, tab_tbl = st.tabs([
-        "Date anuale", "Date trimestriale", "Tabel date"
+        "Date anuale", trim_tab_label, "Tabel date"
     ])
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -162,7 +194,7 @@ def render():
                     text=[f"{v:+.1f}%" for v in var_yoy],
                     textposition="outside",
                     textfont=dict(size=9, color="#444441"),
-                    hovertemplate="<b>%{x}</b>: %{y:+.1f}%<extra></extra>",
+                    hovertemplate="<b>%{x}</b>: %{y:+.2f}%<extra></extra>",
                 ))
                 fig_sv.add_hline(y=0, line_color="#e8e4dc", line_width=1)
                 fig_sv.update_layout(**{**_layout_an(), "yaxis": dict(
@@ -235,7 +267,7 @@ def render():
                             marker=dict(
                                 size=6
                             ),
-                            hovertemplate=f"<b>{name}</b> %{{x}}: %{{y:.1f}}%<extra></extra>",
+                            hovertemplate=f"<b>{name}</b> %{{x}}: %{{y:.2f}}%<extra></extra>",
                         ))
 
                 fig_pm1.update_layout(
@@ -304,7 +336,7 @@ def render():
                             size=9,
                             color="#444441"
                         ),
-                        hovertemplate="<b>%{x}</b>: rata șomaj %{y:.1f}%<extra></extra>",
+                        hovertemplate="<b>%{x}</b>: rata șomaj %{y:.2f}%<extra></extra>",
                     ))
                     # ── Linie medie ────────────────────────────────────────────────
                     fig_pm2.add_hline(
@@ -400,7 +432,7 @@ def render():
                         y=df_occ["barbati"].round(1).tolist(),
                         marker_color="#185FA5",
                         opacity=0.88,
-                        hovertemplate="Bărbați <b>%{x}</b>: %{y:,.1f} mii<extra></extra>",
+                        hovertemplate="Bărbați <b>%{x}</b>: %{y:,.2f} mii<extra></extra>",
                     ))
                 if has_f:
                     fig_gen.add_trace(go.Bar(
@@ -409,7 +441,7 @@ def render():
                         y=df_occ["femei"].round(1).tolist(),
                         marker_color="#993556",
                         opacity=0.88,
-                        hovertemplate="Femei <b>%{x}</b>: %{y:,.1f} mii<extra></extra>",
+                        hovertemplate="Femei <b>%{x}</b>: %{y:,.2f} mii<extra></extra>",
                     ))
                 if has_tot:
                     tot_vals = df_occ["total"].round(1).tolist()
@@ -432,7 +464,7 @@ def render():
                             size=8,
                             color="#0D1F3C"
                         ),
-                        hovertemplate="Total <b>%{x}</b>: %{y:,.1f} mii<extra></extra>",
+                        hovertemplate="Total <b>%{x}</b>: %{y:,.2f} mii<extra></extra>",
                     ))
                 y_max = max(df_occ["total"].tolist()) if has_tot else (
                     max(df_occ.get("barbati", pd.Series([900])).tolist()) * 2
@@ -510,7 +542,7 @@ def render():
                             size=9,
                             color="white"
                         ),
-                        hovertemplate="Bărbați <b>%{x}</b>: %{y:.1f}%<extra></extra>",
+                        hovertemplate="Bărbați <b>%{x}</b>: %{y:.2f}%<extra></extra>",
                     ))
 
                     fig_pct.add_trace(go.Bar(
@@ -525,7 +557,7 @@ def render():
                             size=9,
                             color="white"
                         ),
-                        hovertemplate="Femei <b>%{x}</b>: %{y:.1f}%<extra></extra>",
+                        hovertemplate="Femei <b>%{x}</b>: %{y:.2f}%<extra></extra>",
                     ))
                     fig_pct.update_layout(
                         **{
@@ -607,7 +639,7 @@ def render():
                 text=[f"{v:,.1f}" for v in som_vals],
                 textposition="outside",
                 textfont=dict(size=9, color="#444441"),
-                hovertemplate="<b>%{x}</b>: %{y:,.1f} mii someri<extra></extra>",
+                hovertemplate="<b>%{x}</b>: %{y:,.2f} mii someri<extra></extra>",
             ))
             fig_som.add_hline(
                 y=media_som, line_dash="dot",
@@ -656,7 +688,7 @@ def render():
                         line=dict(color="#0F6E56", width=2.5),
                         marker=dict(size=5, color="#0F6E56"),
                         fill="tozeroy", fillcolor="rgba(15,110,86,0.07)",
-                        hovertemplate="<b>%{x}</b>: %{y:.1f}%<extra></extra>",
+                        hovertemplate="<b>%{x}</b>: %{y:.2f}%<extra></extra>",
                     ))
                     fig.add_hline(
                         y=df_q["rata_somaj_pct"].mean(), line_dash="dot",
@@ -676,7 +708,7 @@ def render():
                     fig2 = go.Figure(go.Bar(
                         x=LABELS, y=vals2,
                         marker_color="#0F6E56", opacity=0.80,
-                        hovertemplate="<b>%{x}</b>: %{y:,.1f} mii pers.<extra></extra>",
+                        hovertemplate="<b>%{x}</b>: %{y:,.2f} mii pers.<extra></extra>",
                     ))
                     fig2.update_layout(**{**_layout_q(), "yaxis": dict(
                         gridcolor="#f1efe8", tickfont=dict(size=10),
@@ -691,7 +723,7 @@ def render():
                 fig3 = go.Figure(go.Bar(
                     x=LABELS, y=vals3,
                     marker_color=colors3, opacity=0.80,
-                    hovertemplate="<b>%{x}</b>: %{y:.1f} mii someri<extra></extra>",
+                    hovertemplate="<b>%{x}</b>: %{y:.2f} mii someri<extra></extra>",
                 ))
                 fig3.add_hline(
                     y=media_s, line_dash="dot",
@@ -735,13 +767,21 @@ def render():
                     fig5 = go.Figure(go.Bar(
                         x=LABELS, y=df_copy["sal_var_yoy"].tolist(),
                         marker_color=colors4, opacity=0.85,
-                        hovertemplate="<b>%{x}</b>: %{y:+.1f}%<extra></extra>",
+                        hovertemplate="<b>%{x}</b>: %{y:+.2f}%<extra></extra>",
                     ))
                     fig5.add_hline(y=0, line_color="#e8e4dc", line_width=1)
                     fig5.update_layout(**{**_layout_q(), "yaxis": dict(
                         gridcolor="#f1efe8", tickfont=dict(size=10), title="%"
                     )})
                     st.plotly_chart(fig5, use_container_width=True, config={"displayModeBar": False})
+
+            # st.caption(f"Sursa date trimestriale: {sursa_trim}")
+            if bns_trim_live:
+                if st.button("Reincarca date trimestriale", key="reload_trim_bns"):
+                    get_salarii_trim_bns.clear()
+                    get_ocupare_trim_bns.clear()
+                    st.rerun()
+
     # ─────────────────────────────────────────────────────────────────────────
     # TAB 3 — TABEL DATE COMPLETE
     # ─────────────────────────────────────────────────────────────────────────
@@ -769,7 +809,7 @@ def render():
                         show_q[col] = show_q[col].apply(
                             lambda x: f"{x:.1f}" if pd.notna(x) else "")
                 st.dataframe(show_q, use_container_width=True, hide_index=True, height=380)
-            st.markdown('<div class="chart-source">Sursa: BNS</div></div>', unsafe_allow_html=True)
+            # st.markdown('<div class="chart-source">Sursa: BNS</div></div>', unsafe_allow_html=True)
 
         with col_t2:
             st.markdown('<div class="chart-card"><div class="chart-card-title">Date anuale</div>', unsafe_allow_html=True)
@@ -807,7 +847,7 @@ def render():
                 st.info("Date anuale indisponibile.")
 
             live_str = "live" if (result_sal["live"] or result_pm["live"]) else "fallback"
-            st.markdown(f'<div class="chart-source">Sursa: BNS </div></div>', unsafe_allow_html=True)
+            # st.markdown(f'<div class="chart-source">Sursa: BNS </div></div>', unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown(

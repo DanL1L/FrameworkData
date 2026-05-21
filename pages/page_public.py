@@ -5,6 +5,7 @@ import os
 from utils.state import page_header, kpi_card, kpi_row
 from utils.charts import line_chart, bar_chart
 from data.demo_data import YEARS_STR, sold_pib
+from utils.api_public import get_buget_trim_bns
 
 
 # ── Loaders ───────────────────────────────────────────────────────────────────
@@ -166,6 +167,8 @@ def render():
     bpn      = _load_bpn()
     dat_res  = _load_datorie()
     vc       = _load_vc()
+    res_bns  = get_buget_trim_bns()
+    df_bns   = res_bns["data"]
     bpn_ok   = bpn["ok"]
     dat_ok   = dat_res["ok"]
     vc_ok    = vc["ok"]
@@ -223,7 +226,9 @@ def render():
                  "sub pragul UE de 60%", dat_last < 60, "amber"),
     ])
 
-    tab1, tab2, tab3 = st.tabs(["Executie bugetara", "Structura BPN", "Datorie publică"])
+    tab1, tab2, tab3 = st.tabs([
+        "Executie bugetara", "Structura BPN", "Datorie publică"
+    ])
 
     def _layout(h=300):
         return dict(
@@ -262,7 +267,7 @@ def render():
                     line=dict(color="#1D9E75", width=2.5),
                     marker=dict(size=6),
                     fill="tozeroy", fillcolor="rgba(29,158,117,0.06)",
-                    hovertemplate="Venituri <b>%{x}</b>: %{y:,.1f} mld. lei<extra></extra>",
+                    hovertemplate="Venituri <b>%{x}</b>: %{y:,.2f} mld. lei<extra></extra>",
                 ))
             if col_tot_chelt:
                 chelt_vals = [df_cean.loc[a, col_tot_chelt] / 1000 for a in ani_vc if a in df_cean.index]
@@ -272,7 +277,7 @@ def render():
                     mode="lines+markers",
                     line=dict(color="#E24B4A", width=2.5),
                     marker=dict(size=6),
-                    hovertemplate="Cheltuieli <b>%{x}</b>: %{y:,.1f} mld. lei<extra></extra>",
+                    hovertemplate="Cheltuieli <b>%{x}</b>: %{y:,.2f} mld. lei<extra></extra>",
                 ))
 
             fig_ev.update_layout(**{
@@ -322,7 +327,7 @@ def render():
                     text=[f"{v:.1f}" for v in tot_v],
                     textposition="top center",
                     textfont=dict(size=9, color="#0D1F3C"),
-                    hovertemplate="Total <b>%{x}</b>: %{y:,.1f} mld. lei<extra></extra>",
+                    hovertemplate="Total <b>%{x}</b>: %{y:,.2f} mld. lei<extra></extra>",
                 ))
 
             fig_vstr.update_layout(**{
@@ -379,7 +384,7 @@ def render():
                     text=[f"{v:.1f}" for v in tot_c],
                     textposition="top center",
                     textfont=dict(size=9, color="#0D1F3C"),
-                    hovertemplate="Total <b>%{x}</b>: %{y:,.1f} mld. lei<extra></extra>",
+                    hovertemplate="Total <b>%{x}</b>: %{y:,.2f} mld. lei<extra></extra>",
                 ))
 
             fig_cstr.update_layout(**{
@@ -475,13 +480,13 @@ def render():
                         name="Venituri", x=ani_str[:len(var_v)],
                         y=var_v.round(1).tolist(),
                         marker_color="#1D9E75", opacity=0.80,
-                        hovertemplate="Venituri <b>%{x}</b>: %{y:+.1f}%<extra></extra>",
+                        hovertemplate="Venituri <b>%{x}</b>: %{y:+.2f}%<extra></extra>",
                     ))
                     fig_var.add_trace(go.Bar(
                         name="Cheltuieli", x=ani_str[:len(var_c)],
                         y=var_c.round(1).tolist(),
                         marker_color="#E24B4A", opacity=0.70,
-                        hovertemplate="Cheltuieli <b>%{x}</b>: %{y:+.1f}%<extra></extra>",
+                        hovertemplate="Cheltuieli <b>%{x}</b>: %{y:+.2f}%<extra></extra>",
                     ))
                     fig_var.add_hline(y=0, line_color="#e8e4dc", line_width=1)
                     fig_var.update_layout(**{
@@ -523,7 +528,7 @@ def render():
                 fig_v.add_trace(go.Bar(
                     name=label, x=ANI_VS, y=vals,
                     marker_color=CULORI_VEN[i], opacity=0.92,
-                    hovertemplate=f"<b>{label}</b> %{{x}}: %{{y:.1f}}% PIB<extra></extra>",
+                    hovertemplate=f"<b>{label}</b> %{{x}}: %{{y:.2f}}% PIB<extra></extra>",
                 ))
 
             fig_v.add_trace(go.Scatter(
@@ -534,7 +539,7 @@ def render():
                 text=[f"{v:.1f}%" for v in tot_ven_pib],
                 textposition="top center",
                 textfont=dict(size=9, color="#0D1F3C"),
-                hovertemplate="Total venituri <b>%{x}</b>: %{y:.1f}% PIB<extra></extra>",
+                hovertemplate="Total venituri <b>%{x}</b>: %{y:.2f}% PIB<extra></extra>",
             ))
             fig_v.update_layout(**{
                 **_layout(380),
@@ -582,7 +587,7 @@ def render():
                 fig_c.add_trace(go.Bar(
                     name=ind, x=ANI_CS, y=vals,
                     marker_color=CULORI_CHELT[i], opacity=0.92,
-                    hovertemplate=f"<b>{ind}</b> %{{x}}: %{{y:.1f}}% PIB<extra></extra>",
+                    hovertemplate=f"<b>{ind}</b> %{{x}}: %{{y:.2f}}% PIB<extra></extra>",
                 ))
 
             fig_c.add_trace(go.Scatter(
@@ -593,7 +598,7 @@ def render():
                 text=[f"{v:.1f}%" for v in tot_chelt_pib],
                 textposition="top center",
                 textfont=dict(size=9, color="#0D1F3C"),
-                hovertemplate="Cheltuieli total <b>%{x}</b>: %{y:.1f}% PIB<extra></extra>",
+                hovertemplate="Cheltuieli total <b>%{x}</b>: %{y:.2f}% PIB<extra></extra>",
             ))
             fig_c.update_layout(**{
                 **_layout(380),
@@ -634,7 +639,7 @@ def render():
                     line=dict(color="#854F0B", width=2.5),
                     marker=dict(size=6),
                     fill="tozeroy", fillcolor="rgba(133,79,11,0.07)",
-                    hovertemplate="Totala <b>%{x}</b>: %{y:.1f}%<extra></extra>",
+                    hovertemplate="Totala <b>%{x}</b>: %{y:.2f}%<extra></extra>",
                 ))
             if dat_ext:
                 fig_dat.add_trace(go.Scatter(
@@ -642,7 +647,7 @@ def render():
                     mode="lines+markers",
                     line=dict(color="#534AB7", width=2, dash="dash"),
                     marker=dict(size=5),
-                    hovertemplate="Externa <b>%{x}</b>: %{y:.1f}%<extra></extra>",
+                    hovertemplate="Externa <b>%{x}</b>: %{y:.2f}%<extra></extra>",
                 ))
             if dat_int:
                 fig_dat.add_trace(go.Scatter(
@@ -650,7 +655,7 @@ def render():
                     mode="lines+markers",
                     line=dict(color="#185FA5", width=2, dash="dot"),
                     marker=dict(size=5),
-                    hovertemplate="Interna <b>%{x}</b>: %{y:.1f}%<extra></extra>",
+                    hovertemplate="Interna <b>%{x}</b>: %{y:.2f}%<extra></extra>",
                 ))
 
             # fig_dat.add_hline(y=60, line_dash="dot", line_color="#E24B4A", line_width=1,
@@ -685,7 +690,7 @@ def render():
                     text=[f"{v:.1f}%" for v in def_vals],
                     textposition="outside",
                     textfont=dict(size=9, color="#444441"),
-                    hovertemplate="<b>%{x}</b>: %{y:.1f}% PIB<extra></extra>",
+                    hovertemplate="<b>%{x}</b>: %{y:.2f}% PIB<extra></extra>",
                 ))
                 fig_def.add_hline(y=0, line_color="#e8e4dc", line_width=1)
                 # fig_def.add_hline(y=-3.0, line_dash="dot", line_color="#BA7517", line_width=1,

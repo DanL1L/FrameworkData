@@ -149,7 +149,7 @@ def render():
                 x=df_curs["data"], y=df_curs.iloc[:, 1],
                 mode="lines", line=dict(color="#185FA5", width=1.5),
                 fill="tozeroy", fillcolor="rgba(24,95,165,0.05)",
-                hovertemplate="<b>%{x|%d %b %Y}</b>: %{y:.4f} MDL<extra></extra>",
+                hovertemplate="<b>%{x|%d %b %Y}</b>: %{y:.2f} MDL<extra></extra>",
             ))
             fig.update_layout(
                 height=260,

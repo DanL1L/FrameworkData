@@ -105,10 +105,10 @@ def render():
             fig = go.Figure()
             fig.add_trace(go.Bar(name="Import", x=LABELS_L, y=df_lunar["import_mil_usd"].tolist(),
                 marker_color="#E24B4A", opacity=0.75,
-                hovertemplate="<b>%{x}</b> Import: %{y:,.1f} mil.<extra></extra>"))
+                hovertemplate="<b>%{x}</b> Import: %{y:,.2f} mil.<extra></extra>"))
             fig.add_trace(go.Bar(name="Export", x=LABELS_L, y=df_lunar["export_mil_usd"].tolist(),
                 marker_color="#534AB7", opacity=0.90,
-                hovertemplate="<b>%{x}</b> Export: %{y:,.1f} mil.<extra></extra>"))
+                hovertemplate="<b>%{x}</b> Export: %{y:,.2f} mil.<extra></extra>"))
             fig.update_layout(**{**_layout_l(), "barmode": "group",
                 "legend": dict(orientation="h", y=1.05, x=0, font=dict(size=10),
                                bgcolor="rgba(0,0,0,0)")})
@@ -121,7 +121,7 @@ def render():
             colors_sold = ["#1D9E75" if v and v >= 0 else "#E24B4A" for v in vals_sold]
             fig2 = go.Figure(go.Bar(x=LABELS_L, y=vals_sold,
                 marker_color=colors_sold, opacity=0.85,
-                hovertemplate="<b>%{x}</b>: %{y:,.1f} mil. USD<extra></extra>"))
+                hovertemplate="<b>%{x}</b>: %{y:,.2f} mil. USD<extra></extra>"))
             fig2.add_hline(y=0, line_color="#444441", line_width=1)
             fig2.update_layout(**{**_layout_l(), "showlegend": False})
             st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
@@ -210,7 +210,7 @@ def render():
                     name=str(an), mode="lines+markers",
                     line=dict(color=colors_ani[idx % 4], width=2.5),
                     marker=dict(size=6),
-                    hovertemplate=f"<b>%{{x}} {an}</b>: %{{y:,.1f}} mil.<extra></extra>"))
+                    hovertemplate=f"<b>%{{x}} {an}</b>: %{{y:,.2f}} mil.<extra></extra>"))
         fig3.update_layout(**{**_layout(260), "showlegend": True,
             "legend": dict(orientation="h", y=1.05, x=0, font=dict(size=10),
                            bgcolor="rgba(0,0,0,0)")})
@@ -232,7 +232,7 @@ def render():
                     y=df_grupe_last["export_mil_usd"].tolist(),
                     marker_color=["#185FA5","#1D9E75","#854F0B"],
                     opacity=0.85,
-                    hovertemplate="<b>%{x}</b>: %{y:,.1f} mil.<extra></extra>",
+                    hovertemplate="<b>%{x}</b>: %{y:,.2f} mil.<extra></extra>",
                     name="Export",
                 ))
                 fig_g1.add_trace(go.Bar(
@@ -240,7 +240,7 @@ def render():
                     y=df_grupe_last["import_mil_usd"].tolist(),
                     marker_color=["#185FA5","#1D9E75","#854F0B"],
                     opacity=0.45,
-                    hovertemplate="<b>%{x}</b>: %{y:,.1f} mil.<extra></extra>",
+                    hovertemplate="<b>%{x}</b>: %{y:,.2f} mil.<extra></extra>",
                     name="Import",
                 ))
                 fig_g1.update_layout(
@@ -260,7 +260,7 @@ def render():
                     hole=0.40,
                     marker_colors=["#185FA5","#1D9E75","#854F0B"],
                     textfont_size=10,
-                    hovertemplate="<b>%{label}</b>: %{value:,.1f} mil. (%{percent})<extra></extra>",
+                    hovertemplate="<b>%{label}</b>: %{value:,.2f} mil. (%{percent})<extra></extra>",
                 ))
                 fig_g2.update_layout(
                     height=260, paper_bgcolor="white",
@@ -304,7 +304,7 @@ def render():
                         y=df_g[val_col_g].tolist(),
                         name=grupa, mode="lines+markers",
                         line=dict(color=color, width=2.5), marker=dict(size=6),
-                        hovertemplate=f"<b>%{{x}} {grupa}</b>: %{{y:,.1f}} mil.<extra></extra>",
+                        hovertemplate=f"<b>%{{x}} {grupa}</b>: %{{y:,.2f}} mil.<extra></extra>",
                     ))
             fig_t1.update_layout(
                 height=320, paper_bgcolor="white", plot_bgcolor="white",
@@ -329,7 +329,7 @@ def render():
                     hole=0.40,
                     marker_colors=[GRUPE_COLORS.get(g,"#888780") for g in df_pie["grupa"].tolist()],
                     textfont_size=10,
-                    hovertemplate="<b>%{label}</b>: %{value:,.1f} mil. (%{percent})<extra></extra>",
+                    hovertemplate="<b>%{label}</b>: %{value:,.2f} mil. (%{percent})<extra></extra>",
                 ))
                 fig_t2.update_layout(
                     height=320, paper_bgcolor="white",
@@ -349,13 +349,13 @@ def render():
                 name="Export", x=df_cmp["grupa"].tolist(),
                 y=df_cmp["export_mil_usd"].tolist(),
                 marker_color="#534AB7", opacity=0.90,
-                hovertemplate="<b>%{x}</b> Export: %{y:,.1f} mil.<extra></extra>",
+                hovertemplate="<b>%{x}</b> Export: %{y:,.2f} mil.<extra></extra>",
             ))
             fig_t3.add_trace(go.Bar(
                 name="Import", x=df_cmp["grupa"].tolist(),
                 y=df_cmp["import_mil_usd"].tolist(),
                 marker_color="#E24B4A", opacity=0.75,
-                hovertemplate="<b>%{x}</b> Import: %{y:,.1f} mil.<extra></extra>",
+                hovertemplate="<b>%{x}</b> Import: %{y:,.2f} mil.<extra></extra>",
             ))
             fig_t3.update_layout(
                 height=280, paper_bgcolor="white", plot_bgcolor="white",
@@ -384,7 +384,7 @@ def render():
                         x=luni_l, y=df_gl[val_col_g].tolist(),
                         name=grupa, mode="lines+markers",
                         line=dict(color=color, width=2.5), marker=dict(size=6),
-                        hovertemplate=f"<b>%{{x}} {grupa}</b>: %{{y:,.1f}} mil.<extra></extra>",
+                        hovertemplate=f"<b>%{{x}} {grupa}</b>: %{{y:,.2f}} mil.<extra></extra>",
                     ))
             fig_t4.update_layout(
                 height=280, paper_bgcolor="white", plot_bgcolor="white",
@@ -458,7 +458,7 @@ def render():
                             text=[f"{v:,.1f}" for v in df_te["export_mil_usd"]],
                             textposition="outside",
                             textfont=dict(size=9),
-                            hovertemplate="<b>%{y}</b>: %{x:,.1f} mil. USD<extra></extra>",
+                            hovertemplate="<b>%{y}</b>: %{x:,.2f} mil. USD<extra></extra>",
                         ))
                         fig_te.update_layout(
                             height=360, paper_bgcolor="white", plot_bgcolor="white",
@@ -499,7 +499,7 @@ def render():
                             text=[f"{v:,.1f}" for v in df_ti["import_mil_usd"]],
                             textposition="outside",
                             textfont=dict(size=9),
-                            hovertemplate="<b>%{y}</b>: %{x:,.1f} mil. USD<extra></extra>",
+                            hovertemplate="<b>%{y}</b>: %{x:,.2f} mil. USD<extra></extra>",
                         ))
                         fig_ti.update_layout(
                             height=360, paper_bgcolor="white", plot_bgcolor="white",
@@ -545,7 +545,7 @@ def render():
                             mode="lines+markers",
                             line=dict(color=EV_COLORS[i % 5], width=2.5),
                             marker=dict(size=6),
-                            hovertemplate=f"<b>%{{x}} {tara}</b>: %{{y:,.1f}} mil.<extra></extra>",
+                            hovertemplate=f"<b>%{{x}} {tara}</b>: %{{y:,.2f}} mil.<extra></extra>",
                         ))
                     fig_ev.update_layout(
                         height=300, paper_bgcolor="white", plot_bgcolor="white",
@@ -667,7 +667,7 @@ def render():
                 fig_exp_str = go.Figure(go.Bar(
                     y=lbl_exp_str.tolist(), x=df_exp_str["export_mil_usd"].tolist(),
                     orientation="h", marker_color="#534AB7", opacity=0.90,
-                    hovertemplate="<b>%{y}</b>: %{x:,.1f} mil.<extra></extra>",
+                    hovertemplate="<b>%{y}</b>: %{x:,.2f} mil.<extra></extra>",
                 ))
                 fig_exp_str.update_layout(**_lp(420))
                 st.plotly_chart(fig_exp_str, use_container_width=True, config={"displayModeBar": False})
@@ -678,7 +678,7 @@ def render():
                 fig_imp_str = go.Figure(go.Bar(
                     y=lbl_imp_str.tolist(), x=df_imp_str["import_mil_usd"].tolist(),
                     orientation="h", marker_color="#E24B4A", opacity=0.85,
-                    hovertemplate="<b>%{y}</b>: %{x:,.1f} mil.<extra></extra>",
+                    hovertemplate="<b>%{y}</b>: %{x:,.2f} mil.<extra></extra>",
                 ))
                 fig_imp_str.update_layout(**_lp(420))
                 st.plotly_chart(fig_imp_str, use_container_width=True, config={"displayModeBar": False})
@@ -725,7 +725,7 @@ def render():
                 name=f"Export {per_prev_label}→{per_label}",
                 x=lbl_rata.tolist(), y=df_rata["rata_exp"].tolist(),
                 marker_color="#534AB7", opacity=0.85,
-                hovertemplate="<b>%{x}</b> Export: %{y:+.1f}%<extra></extra>",
+                hovertemplate="<b>%{x}</b> Export: %{y:+.2f}%<extra></extra>",
                 text=[f"{v:+.0f}%" for v in df_rata["rata_exp"]],
                 textposition="outside", textfont=dict(size=8),
             ))
@@ -733,7 +733,7 @@ def render():
                 name=f"Import {per_prev_label}→{per_label}",
                 x=lbl_rata.tolist(), y=df_rata["rata_imp"].tolist(),
                 marker_color="#E24B4A", opacity=0.70,
-                hovertemplate="<b>%{x}</b> Import: %{y:+.1f}%<extra></extra>",
+                hovertemplate="<b>%{x}</b> Import: %{y:+.2f}%<extra></extra>",
             ))
             fig_rata.add_hline(y=0, line_color="#444441", line_width=1)
             fig_rata.update_layout(
@@ -800,12 +800,12 @@ def render():
             fig_iv.add_trace(go.Scatter(
                 name="Export — Indice valoric", x=TRIM_L, y=df_exp["ind_valoric"].tolist(),
                 mode="lines+markers", line=dict(color="#534AB7", width=2.5), marker=dict(size=5),
-                hovertemplate="<b>%{x}</b> Export: %{y:.1f}<extra></extra>",
+                hovertemplate="<b>%{x}</b> Export: %{y:.2f}<extra></extra>",
             ))
             fig_iv.add_trace(go.Scatter(
                 name="Import — Indice valoric", x=TRIM_L, y=df_imp["ind_valoric"].tolist(),
                 mode="lines+markers", line=dict(color="#E24B4A", width=2.5), marker=dict(size=5),
-                hovertemplate="<b>%{x}</b> Import: %{y:.1f}<extra></extra>",
+                hovertemplate="<b>%{x}</b> Import: %{y:.2f}<extra></extra>",
             ))
             _hline100(fig_iv)
             fig_iv.update_layout(**{**_li(280), "showlegend": True,
@@ -826,12 +826,12 @@ def render():
                 fig_vu.add_trace(go.Scatter(
                     name="Export", x=TRIM_L, y=df_exp["ind_val_unitara"].tolist(),
                     mode="lines+markers", line=dict(color="#534AB7", width=2.5), marker=dict(size=5),
-                    hovertemplate="<b>%{x}</b> Export: %{y:.1f}<extra></extra>",
+                    hovertemplate="<b>%{x}</b> Export: %{y:.2f}<extra></extra>",
                 ))
                 fig_vu.add_trace(go.Scatter(
                     name="Import", x=TRIM_L, y=df_imp["ind_val_unitara"].tolist(),
                     mode="lines+markers", line=dict(color="#E24B4A", width=2.5), marker=dict(size=5),
-                    hovertemplate="<b>%{x}</b> Import: %{y:.1f}<extra></extra>",
+                    hovertemplate="<b>%{x}</b> Import: %{y:.2f}<extra></extra>",
                 ))
                 _hline100(fig_vu)
                 fig_vu.update_layout(**{**_li(), "showlegend": True,
@@ -849,12 +849,12 @@ def render():
                 fig_vf.add_trace(go.Scatter(
                     name="Export", x=TRIM_L, y=df_exp["ind_volum"].tolist(),
                     mode="lines+markers", line=dict(color="#534AB7", width=2.5), marker=dict(size=5),
-                    hovertemplate="<b>%{x}</b> Export: %{y:.1f}<extra></extra>",
+                    hovertemplate="<b>%{x}</b> Export: %{y:.2f}<extra></extra>",
                 ))
                 fig_vf.add_trace(go.Scatter(
                     name="Import", x=TRIM_L, y=df_imp["ind_volum"].tolist(),
                     mode="lines+markers", line=dict(color="#E24B4A", width=2.5), marker=dict(size=5),
-                    hovertemplate="<b>%{x}</b> Import: %{y:.1f}<extra></extra>",
+                    hovertemplate="<b>%{x}</b> Import: %{y:.2f}<extra></extra>",
                 ))
                 _hline100(fig_vf)
                 fig_vf.update_layout(**{**_li(), "showlegend": True,
@@ -882,7 +882,7 @@ def render():
             fig_tot.add_trace(go.Bar(
                 x=df_tot["trim_label"].tolist(), y=vals_tot,
                 marker_color=colors_tot, opacity=0.85,
-                hovertemplate="<b>%{x}</b>: %{y:.1f}<extra></extra>",
+                hovertemplate="<b>%{x}</b>: %{y:.2f}<extra></extra>",
             ))
             fig_tot.add_hline(y=100, line_color="#444441", line_width=1.5, line_dash="dash")
             fig_tot.update_layout(**{**_li(260), "showlegend": False,
@@ -982,17 +982,17 @@ def render():
             fig_s3.add_trace(go.Bar(name="Import servicii", x=ani_str,
                 y=df_anual["import_total"].tolist(),
                 marker_color="#993556", opacity=0.75,
-                hovertemplate="<b>%{x}</b> Import: %{y:,.1f} mil.<extra></extra>"))
+                hovertemplate="<b>%{x}</b> Import: %{y:,.2f} mil.<extra></extra>"))
             fig_s3.add_trace(go.Bar(name="Export servicii", x=ani_str,
                 y=df_anual["export_total"].tolist(),
                 marker_color="#534AB7", opacity=0.90,
-                hovertemplate="<b>%{x}</b> Export: %{y:,.1f} mil.<extra></extra>"))
+                hovertemplate="<b>%{x}</b> Export: %{y:,.2f} mil.<extra></extra>"))
             fig_s3.add_trace(go.Scatter(name="Sold", x=ani_str,
                 y=df_anual["sold_total"].tolist(),
                 mode="lines+markers",
                 line=dict(color="#1D9E75", width=2.5, dash="dot"),
                 marker=dict(size=7),
-                hovertemplate="<b>%{x}</b> Sold: %{y:+,.1f} mil.<extra></extra>",
+                hovertemplate="<b>%{x}</b> Sold: %{y:+,.2f} mil.<extra></extra>",
                 yaxis="y2"))
             fig_s3.update_layout(
                 height=300, paper_bgcolor="white", plot_bgcolor="white",
@@ -1029,11 +1029,11 @@ def render():
                 fig_s4.add_trace(go.Bar(name="Export bunuri", x=ani_m,
                     y=merged["export_bunuri"].tolist(),
                     marker_color="#185FA5", opacity=0.85,
-                    hovertemplate="<b>%{x}</b> Bunuri: %{y:,.1f} mil.<extra></extra>"))
+                    hovertemplate="<b>%{x}</b> Bunuri: %{y:,.2f} mil.<extra></extra>"))
                 fig_s4.add_trace(go.Bar(name="Export servicii", x=ani_m,
                     y=merged["export_total"].tolist(),
                     marker_color="#534AB7", opacity=0.85,
-                    hovertemplate="<b>%{x}</b> Servicii: %{y:,.1f} mil.<extra></extra>"))
+                    hovertemplate="<b>%{x}</b> Servicii: %{y:,.2f} mil.<extra></extra>"))
                 fig_s4.update_layout(
                     height=280, paper_bgcolor="white", plot_bgcolor="white",
                     font=dict(family="IBM Plex Sans", size=11, color="#444441"),

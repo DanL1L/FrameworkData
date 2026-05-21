@@ -209,7 +209,7 @@ def render():
             text=[f"{v:.2f}" for v in pib_mld_vals],
             textposition="outside",
             textfont=dict(size=9, color="#444441"),
-            hovertemplate="<b>%{x}</b>: %{y:.3f} mld. USD<extra></extra>",
+            hovertemplate="<b>%{x}</b>: %{y:.2f} mld. USD<extra></extra>",
         ))
         fig1.update_layout(**{**_layout(), "yaxis": dict(
             gridcolor="#f1efe8", tickfont=dict(size=10), zeroline=False, title="mld. USD"
@@ -252,7 +252,7 @@ def render():
             text=[f"{v:.1f}%" for v in ipc_vals],
             textposition="outside",
             textfont=dict(size=9, color="#444441"),
-            hovertemplate="<b>%{x}</b>: IPC %{y:.1f}%<extra></extra>",
+            hovertemplate="<b>%{x}</b>: IPC %{y:.2f}%<extra></extra>",
         ))
         fig3.update_layout(**{**_layout(), "yaxis": dict(
             gridcolor="#f1efe8", tickfont=dict(size=10),
