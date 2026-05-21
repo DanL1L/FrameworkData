@@ -627,7 +627,7 @@ def render():
         # st.markdown("")
 
         # ── Someri — bar bicolor fata de medie ───────────────────────────────
-        st.markdown('<div class="chart-card"><div class="chart-card-title">Numarul somerilor (mii persoane) · date anuale</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-card"><div class="chart-card-title">Numarul somerilor (mii persoane), date anuale</div>', unsafe_allow_html=True)
         if not df_pop.empty and "someri_mii" in df_pop.columns:
             ani_som   = df_pop["an"].astype(str).tolist()
             som_vals  = df_pop["someri_mii"].tolist()
@@ -754,7 +754,7 @@ def render():
                     )})
                     st.plotly_chart(fig4, use_container_width=True, config={"displayModeBar": False})
             with col4:
-                st.markdown('<div class="chart-card"><div class="chart-card-title">Salariu mediu — variatie an/an (%)</div>', unsafe_allow_html=True)
+                st.markdown('<div class="chart-card"><div class="chart-card-title">Salariu mediu, variatie an/an (%)</div>', unsafe_allow_html=True)
                 if "salariu_mediu_mdl" in df_q.columns:
                     df_copy = df_q.copy()
                     df_copy["sal_var_yoy"] = df_copy.groupby(

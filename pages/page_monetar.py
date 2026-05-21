@@ -333,7 +333,7 @@ def render():
             # st.markdown('<div class="chart-source">Sursa: BNM — Date_Sector_Monetar.xlsx</div></div>', unsafe_allow_html=True)
 
         with col2:
-            st.markdown('<div class="chart-card"><div class="chart-card-title">Depozite totale — variatie anuala (%)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-card"><div class="chart-card-title">Depozite totale, variatie anuala (%)</div>', unsafe_allow_html=True)
             if "depozite_total_mil_lei" in df.columns:
                 var_dep = df["depozite_total_mil_lei"].pct_change() * 100
                 c_dep   = ["#1D9E75" if v >= 0 else "#E24B4A" for v in var_dep.fillna(0)]
@@ -353,7 +353,7 @@ def render():
             # st.markdown('<div class="chart-source">Calcule: BNM</div></div>', unsafe_allow_html=True)
 
         # Structura procentuala 100%
-        st.markdown('<div class="chart-card"><div class="chart-card-title">Structura depozitelor (%) — vedere MN / termen MN / valuta</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-card"><div class="chart-card-title">Structura depozitelor (%), vedere MN / termen MN / valuta</div>', unsafe_allow_html=True)
         dep_struct = ["depozite_vedere_mn_mil_lei", "depozite_termen_mn_mil_lei", "depozite_valuta_mil_lei"]
         if all(c in df.columns for c in dep_struct) and "depozite_total_mil_lei" in df.columns:
             fig_dpct = go.Figure()
