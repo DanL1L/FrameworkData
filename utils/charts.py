@@ -69,7 +69,7 @@ def stacked_bar(x, series: dict, ylabel="", colors=None):
         fig.add_trace(go.Bar(
             name=name, x=x, y=y,
             marker_color=pal[i % len(pal)],
-            hovertemplate=f"{name}: <b>%{{y:.1f}}</b><extra></extra>",
+            hovertemplate=f"{name}: <b>%{{y:.2f}}</b><extra></extra>",
         ))
     fig.update_layout(**LAYOUT_BASE, height=280, barmode="stack", yaxis_title=ylabel)
     return fig
