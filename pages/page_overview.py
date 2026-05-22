@@ -269,7 +269,7 @@ def render():
         fig3 = go.Figure(go.Bar(
             x=YEARS_BNS, y=ipc_vals,
             marker_color=colors_ipc, opacity=0.88,
-            text=[f"{v:.1f}%" for v in ipc_vals],
+            text=[f"{v:.2f}%" for v in ipc_vals],
             textposition="outside",
             textfont=dict(size=9, color="#444441"),
             hovertemplate="<b>%{x}</b>: IPC %{y:.2f}%<extra></extra>",

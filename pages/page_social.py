@@ -191,7 +191,7 @@ def render():
                 fig_sv = go.Figure(go.Bar(
                     x=ani_sal, y=var_yoy.round(1).tolist(),
                     marker_color=colors_sal, opacity=0.88,
-                    text=[f"{v:+.1f}%" for v in var_yoy],
+                    text=[f"{v:+.2f}%" for v in var_yoy],
                     textposition="outside",
                     textfont=dict(size=9, color="#444441"),
                     hovertemplate="<b>%{x}</b>: %{y:+.2f}%<extra></extra>",
@@ -330,7 +330,7 @@ def render():
                         y=somaj_vals,
                         marker_color=colors_som,
                         opacity=0.88,
-                        text=[f"{v:.1f}%" for v in somaj_vals],
+                        text=[f"{v:.2f}%" for v in somaj_vals],
                         textposition="outside",
                         textfont=dict(
                             size=9,
@@ -458,7 +458,7 @@ def render():
                             size=5,
                             color="#0D1F3C"
                         ),
-                        text=[f"{v:,.1f}" for v in tot_vals],
+                        text=[f"{v:,.2f}" for v in tot_vals],
                         textposition="top center",
                         textfont=dict(
                             size=8,
@@ -536,7 +536,7 @@ def render():
                         y=[round(v, 1) for v in b_pct],
                         marker_color="#185FA5",
                         opacity=0.88,
-                        text=[f"{v:.1f}%" for v in b_pct],
+                        text=[f"{v:.2f}%" for v in b_pct],
                         textposition="inside",
                         textfont=dict(
                             size=9,
@@ -551,7 +551,7 @@ def render():
                         y=[round(v, 1) for v in f_pct],
                         marker_color="#993556",
                         opacity=0.88,
-                        text=[f"{v:.1f}%" for v in f_pct],
+                        text=[f"{v:.2f}%" for v in f_pct],
                         textposition="inside",
                         textfont=dict(
                             size=9,
@@ -636,7 +636,7 @@ def render():
             fig_som = go.Figure(go.Bar(
                 x=ani_som, y=som_vals,
                 marker_color=colors_sm, opacity=0.85,
-                text=[f"{v:,.1f}" for v in som_vals],
+                text=[f"{v:,.2f}" for v in som_vals],
                 textposition="outside",
                 textfont=dict(size=9, color="#444441"),
                 hovertemplate="<b>%{x}</b>: %{y:,.2f} mii someri<extra></extra>",
@@ -759,7 +759,7 @@ def render():
                     df_copy = df_q.copy()
                     df_copy["sal_var_yoy"] = df_copy.groupby(
                         df_copy["trimestru"] if "trimestru" in df_copy.columns else df_copy.index
-                    )["salariu_mediu_mdl"].pct_change() * 100
+                    )(["salariu_mediu_mdl"].pct_change() * 100).round(2)
                     if df_copy["sal_var_yoy"].isna().all():
                         df_copy["sal_var_yoy"] = df_copy["salariu_mediu_mdl"].pct_change(4) * 100
                     colors4 = ["#1D9E75" if v >= 0 else "#E24B4A"

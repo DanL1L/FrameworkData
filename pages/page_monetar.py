@@ -95,7 +95,7 @@ def render():
     tab2, tab3, tab1 = st.tabs([
         "Date sector monetar",
         "Credite / Depozite",
-        "Baza monetară",
+        "Agregate monetare",
     ])
 
     # ═══════════════════════════════════════════════════════════════════════════
@@ -243,7 +243,7 @@ def render():
         col1, col2 = st.columns(2)
 
         with col1:
-            st.markdown('<div class="chart-card"><div class="chart-card-title">Bani lichizi in circulatie, MO (mil. lei)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-card"><div class="chart-card-title">Bani lichizi in circulatie, MO (mil. lei) sfirsit de an</div>', unsafe_allow_html=True)
             mo_col = "bani_lichizi_mo_mil_lei" if "bani_lichizi_mo_mil_lei" in df.columns else "baza_monetara_mil_lei"
             if mo_col in df.columns:
                 fig5 = go.Figure(go.Scatter(
@@ -262,7 +262,7 @@ def render():
             # st.markdown('<div class="chart-source">Sursa: BNM — Date_Sector_Monetar.xlsx</div></div>', unsafe_allow_html=True)
 
         with col2:
-            st.markdown('<div class="chart-card"><div class="chart-card-title">Depozite totale (mil. lei)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-card"><div class="chart-card-title">Depozite totale (mil. lei) sfirsit de an</div>', unsafe_allow_html=True)
             if dep_col in df.columns:
                 fig6 = go.Figure(go.Scatter(
                     x=YEARS_STR, y=df[dep_col].tolist(),
@@ -298,7 +298,7 @@ def render():
         col1, col2 = st.columns(2)
 
         with col1:
-            st.markdown('<div class="chart-card"><div class="chart-card-title">Structura depozitelor bancare (mil. lei)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-card"><div class="chart-card-title">Structura depozitelor bancare (mil. lei) sfirsit de an</div>', unsafe_allow_html=True)
             fig_dep = go.Figure()
             for col_k, name, color in [
                 ("depozite_vedere_mn_mil_lei", "La vedere MN (Monedă națională)",  "#185FA5"),
@@ -353,7 +353,7 @@ def render():
             # st.markdown('<div class="chart-source">Calcule: BNM</div></div>', unsafe_allow_html=True)
 
         # Structura procentuala 100%
-        st.markdown('<div class="chart-card"><div class="chart-card-title">Structura depozitelor (%), vedere MN / termen MN / valuta</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-card"><div class="chart-card-title">Structura depozitelor (%), vedere MN / termen MN / valuta sfirsit de an</div>', unsafe_allow_html=True)
         dep_struct = ["depozite_vedere_mn_mil_lei", "depozite_termen_mn_mil_lei", "depozite_valuta_mil_lei"]
         if all(c in df.columns for c in dep_struct) and "depozite_total_mil_lei" in df.columns:
             fig_dpct = go.Figure()
@@ -557,9 +557,9 @@ def render():
             "credite_total_mil_lei":             "Total credite",
             "credite_juridice_mil_lei":          "Credite persoane juridice",
             "credite_fizice_mil_lei":            "Credite persoane fizice",
-            "credite_consum_mil_lei":            "din care: Consum",
-            "credite_imobil_mil_lei":            "din care: Imobil",
-            "credite_alte_mil_lei":              "din care: Alte",
+            "credite_consum_mil_lei":            "Consum",
+            "credite_imobil_mil_lei":            "Imobil",
+            "credite_alte_mil_lei":              "Alte",
         }
         tbl_cr = df[[c for c in cr_rename if c in df.columns]].rename(columns=cr_rename).copy()
         tbl_cr["An"] = tbl_cr["An"].astype(int)

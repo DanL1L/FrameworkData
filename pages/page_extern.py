@@ -230,7 +230,7 @@ def render():
                 fig_g1 = go.Figure(go.Bar(
                     x=df_grupe_last["grupa"].tolist(),
                     y=df_grupe_last["export_mil_usd"].tolist(),
-                    marker_color=["#185FA5","#185FA5","#185FA5"],
+                    marker_color=["#534AB7","#534AB7","#534AB7"],
                     opacity=0.85,
                     hovertemplate="<b>%{x}</b>: %{y:,.2f} mil.<extra></extra>",
                     name="Export",
@@ -238,7 +238,7 @@ def render():
                 fig_g1.add_trace(go.Bar(
                     x=df_grupe_last["grupa"].tolist(),
                     y=df_grupe_last["import_mil_usd"].tolist(),
-                    marker_color=["#1D9E75","#1D9E75","#1D9E75"],
+                    marker_color=["#E24B4A","#E24B4A","#E24B4A"],
                     opacity=0.45,
                     hovertemplate="<b>%{x}</b>: %{y:,.2f} mil.<extra></extra>",
                     name="Import",
@@ -625,20 +625,20 @@ def render():
             merged["rata_exp"] = (
                 (merged["export_mil_usd"] - merged["export_mil_usd_prev"])
                 / merged["export_mil_usd_prev"] * 100
-            ).where(merged["export_mil_usd_prev"].notna() & (merged["export_mil_usd_prev"] != 0))
+            ).where(merged["export_mil_usd_prev"].notna() & (merged["export_mil_usd_prev"] != 0)).round(2)
 
             merged["rata_imp"] = (
                 (merged["import_mil_usd"] - merged["import_mil_usd_prev"])
                 / merged["import_mil_usd_prev"] * 100
-            ).where(merged["import_mil_usd_prev"].notna() & (merged["import_mil_usd_prev"] != 0))
+            ).where(merged["import_mil_usd_prev"].notna() & (merged["import_mil_usd_prev"] != 0)).round(2)
 
             # Grad de influenta = (val_cur - val_prev) / Total_prev * 100
             merged["influenta_exp"] = (
-                (merged["export_mil_usd"] - merged["export_mil_usd_prev"]) / total_exp_prev * 100
+                ((merged["export_mil_usd"] - merged["export_mil_usd_prev"]) / total_exp_prev * 100).round(2)
                 if total_exp_prev else None
             )
             merged["influenta_imp"] = (
-                (merged["import_mil_usd"] - merged["import_mil_usd_prev"]) / total_imp_prev * 100
+                ((merged["import_mil_usd"] - merged["import_mil_usd_prev"]) / total_imp_prev * 100).round(2)
                 if total_imp_prev else None
             )
 
