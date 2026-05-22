@@ -101,7 +101,7 @@ def render():
         col1, col2 = st.columns(2)
 
         with col1:
-            st.markdown('<div class="chart-card"><div class="chart-card-title">Export si Import lunar (mil. USD) · 2024–prezent</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-card"><div class="chart-card-title">Export si Import lunar (mil. USD), 2025–prezent</div>', unsafe_allow_html=True)
             fig = go.Figure()
             fig.add_trace(go.Bar(name="Import", x=LABELS_L, y=df_lunar["import_mil_usd"].tolist(),
                 marker_color="#E24B4A", opacity=0.75,
@@ -116,7 +116,7 @@ def render():
             # st.markdown(f'<div class="chart-source">Sursa: BNS EXT015000 ({res_ext["ts"]})</div></div>', unsafe_allow_html=True)
 
         with col2:
-            st.markdown('<div class="chart-card"><div class="chart-card-title">Balanta comerciala lunara (mil. USD) · 2024–prezent</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-card"><div class="chart-card-title">Balanta comerciala lunara (mil. USD), 2025–prezent</div>', unsafe_allow_html=True)
             vals_sold = df_lunar["sold_mil_usd"].tolist()
             colors_sold = ["#1D9E75" if v and v >= 0 else "#E24B4A" for v in vals_sold]
             fig2 = go.Figure(go.Bar(x=LABELS_L, y=vals_sold,
@@ -230,7 +230,7 @@ def render():
                 fig_g1 = go.Figure(go.Bar(
                     x=df_grupe_last["grupa"].tolist(),
                     y=df_grupe_last["export_mil_usd"].tolist(),
-                    marker_color=["#185FA5","#1D9E75","#854F0B"],
+                    marker_color=["#185FA5","#185FA5","#185FA5"],
                     opacity=0.85,
                     hovertemplate="<b>%{x}</b>: %{y:,.2f} mil.<extra></extra>",
                     name="Export",
@@ -238,7 +238,7 @@ def render():
                 fig_g1.add_trace(go.Bar(
                     x=df_grupe_last["grupa"].tolist(),
                     y=df_grupe_last["import_mil_usd"].tolist(),
-                    marker_color=["#185FA5","#1D9E75","#854F0B"],
+                    marker_color=["#1D9E75","#1D9E75","#1D9E75"],
                     opacity=0.45,
                     hovertemplate="<b>%{x}</b>: %{y:,.2f} mil.<extra></extra>",
                     name="Import",
@@ -320,7 +320,7 @@ def render():
             # st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_ext["ts"]})</div></div>', unsafe_allow_html=True)
 
         with col2:
-            st.markdown(f'<div class="chart-card"><div class="chart-card-title">Structura {tip_g} pe grupe tari — {an_g} (%)</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="chart-card"><div class="chart-card-title">Structura {tip_g} pe grupe tari, {an_g} (%)</div>', unsafe_allow_html=True)
             df_pie = df_anual_grupe[df_anual_grupe["an"] == an_g]
             if not df_pie.empty:
                 fig_t2 = go.Figure(go.Pie(
@@ -341,7 +341,7 @@ def render():
             # st.markdown(f'<div class="chart-source">Sursa: BNS  ({res_ext["ts"]})</div></div>', unsafe_allow_html=True)
 
         # Comparatie Export vs Import pentru fiecare grupa in anul selectat
-        st.markdown(f'<div class="chart-card"><div class="chart-card-title">Export vs Import pe grupe de tari — {an_g} (mil. USD)</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="chart-card"><div class="chart-card-title">Export vs Import pe grupe de tari, {an_g} (mil. USD)</div>', unsafe_allow_html=True)
         df_cmp = df_anual_grupe[df_anual_grupe["an"] == an_g].copy()
         if not df_cmp.empty:
             fig_t3 = go.Figure()
@@ -455,7 +455,7 @@ def render():
                             orientation="h",
                             marker_color=colors_exp,
                             opacity=0.88,
-                            text=[f"{v:,.1f}" for v in df_te["export_mil_usd"]],
+                            text=[f"{v:,.2f}" for v in df_te["export_mil_usd"]],
                             textposition="outside",
                             textfont=dict(size=9),
                             hovertemplate="<b>%{y}</b>: %{x:,.2f} mil. USD<extra></extra>",
@@ -496,7 +496,7 @@ def render():
                             orientation="h",
                             marker_color=colors_imp,
                             opacity=0.88,
-                            text=[f"{v:,.1f}" for v in df_ti["import_mil_usd"]],
+                            text=[f"{v:,.2f}" for v in df_ti["import_mil_usd"]],
                             textposition="outside",
                             textfont=dict(size=9),
                             hovertemplate="<b>%{y}</b>: %{x:,.2f} mil. USD<extra></extra>",
