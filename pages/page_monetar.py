@@ -119,7 +119,7 @@ def render():
                 fig_ipc_m = go.Figure(go.Bar(
                     x=ani_tna, y=ipc_vals_an,
                     marker_color=colors_m, opacity=0.88,
-                    text=[f"{v:.1f}%" for v in ipc_vals_an],
+                    text=[f"{v:.2f}%" for v in ipc_vals_an],
                     textposition="outside",
                     textfont=dict(size=9, color="#444441"),
                     hovertemplate="<b>%{x}</b>: IPC mediu %{y:.2f}%<extra></extra>",
@@ -160,7 +160,7 @@ def render():
                 fig2 = go.Figure(go.Bar(
                     x=years_ipc, y=vals_ipc,
                     marker_color=colors_ipc, opacity=0.85,
-                    text=[f"{v:.1f}%" for v in vals_ipc],
+                    text=[f"{v:.2f}%" for v in vals_ipc],
                     textposition="outside",
                     textfont=dict(size=9, color="#444441"),
                     hovertemplate="<b>%{x}</b>: %{y:.2f}%<extra></extra>",
@@ -197,7 +197,7 @@ def render():
         with col4:
             st.markdown('<div class="chart-card"><div class="chart-card-title">Active oficiale de rezerva, variatie anuala (%)</div>', unsafe_allow_html=True)
             if rez_col in df.columns:
-                rez_pct    = df[rez_col].pct_change() * 100
+                rez_pct    = (df[rez_col].pct_change() * 100).round(2)
                 colors_rez = ["#1D9E75" if v >= 0 else "#E24B4A"
                               for v in rez_pct.fillna(0)]
                 fig4 = go.Figure(go.Bar(
@@ -319,7 +319,7 @@ def render():
                     mode="lines+markers+text",
                     line=dict(color="#0D1F3C", width=2.5),
                     marker=dict(size=5),
-                    text=[f"{v/1000:.1f}" for v in df["depozite_total_mil_lei"]],
+                    text=[f"{v/1000:.2f}" for v in df["depozite_total_mil_lei"]],
                     textposition="top center",
                     textfont=dict(size=8, color="#0D1F3C"),
                     hovertemplate="<b>%{x}</b> Total: %{y:,.0f}<extra></extra>",
@@ -335,12 +335,12 @@ def render():
         with col2:
             st.markdown('<div class="chart-card"><div class="chart-card-title">Depozite totale, variatie anuala (%)</div>', unsafe_allow_html=True)
             if "depozite_total_mil_lei" in df.columns:
-                var_dep = df["depozite_total_mil_lei"].pct_change() * 100
+                var_dep = (df["depozite_total_mil_lei"].pct_change() * 100).round(2)
                 c_dep   = ["#1D9E75" if v >= 0 else "#E24B4A" for v in var_dep.fillna(0)]
                 fig_vd  = go.Figure(go.Bar(
                     x=YEARS_STR, y=var_dep.tolist(),
                     marker_color=c_dep, opacity=0.85,
-                    text=[f"{v:+.1f}%" for v in var_dep.fillna(0)],
+                    text=[f"{v:+.2f}%" for v in var_dep.fillna(0)],
                     textposition="outside",
                     textfont=dict(size=9, color="#444441"),
                     hovertemplate="<b>%{x}</b>: %{y:+.2f}%<extra></extra>",
@@ -454,7 +454,7 @@ def render():
                     mode="lines+markers+text",
                     line=dict(color="#0D1F3C", width=2.5),
                     marker=dict(size=5),
-                    text=[f"{v/1000:.1f}" for v in df["credite_total_mil_lei"]],
+                    text=[f"{v/1000:.2f}" for v in df["credite_total_mil_lei"]],
                     textposition="top center",
                     textfont=dict(size=8, color="#0D1F3C"),
                     hovertemplate="<b>%{x}</b> Total: %{y:,.0f}<extra></extra>",
@@ -494,7 +494,7 @@ def render():
         with col3:
             st.markdown('<div class="chart-card"><div class="chart-card-title">Creditele noi acordate persoanelor juridice, variatie anuala (%)</div>', unsafe_allow_html=True)
             if "credite_juridice_mil_lei" in df.columns:
-                var_j = df["credite_juridice_mil_lei"].pct_change() * 100
+                var_j = (df["credite_juridice_mil_lei"].pct_change() * 100).round(2)
                 c_j   = ["#1D9E75" if v >= 0 else "#E24B4A" for v in var_j.fillna(0)]
                 fig_vj = go.Figure(go.Bar(
                     x=YEARS_STR, y=var_j.tolist(),
@@ -511,7 +511,7 @@ def render():
         with col4:
             st.markdown('<div class="chart-card"><div class="chart-card-title">Creditele noi acordate persoanelor fizice, variatie anuala (%)</div>', unsafe_allow_html=True)
             if "credite_fizice_mil_lei" in df.columns:
-                var_f = df["credite_fizice_mil_lei"].pct_change() * 100
+                var_f = (df["credite_fizice_mil_lei"].pct_change() * 100).round(2)
                 c_f   = ["#1D9E75" if v >= 0 else "#E24B4A" for v in var_f.fillna(0)]
                 fig_vf = go.Figure(go.Bar(
                     x=YEARS_STR, y=var_f.tolist(),
