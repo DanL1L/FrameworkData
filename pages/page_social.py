@@ -759,9 +759,9 @@ def render():
                     df_copy = df_q.copy()
                     df_copy["sal_var_yoy"] = df_copy.groupby(
                         df_copy["trimestru"] if "trimestru" in df_copy.columns else df_copy.index
-                    )(["salariu_mediu_mdl"].pct_change() * 100).round(2)
+                    )["salariu_mediu_mdl"].pct_change() * 100
                     if df_copy["sal_var_yoy"].isna().all():
-                        df_copy["sal_var_yoy"] = df_copy["salariu_mediu_mdl"].pct_change(4) * 100
+                        df_copy["sal_var_yoy"] = (df_copy["salariu_mediu_mdl"].pct_change(4) * 100).round(2)
                     colors4 = ["#1D9E75" if v >= 0 else "#E24B4A"
                                for v in df_copy["sal_var_yoy"].fillna(0)]
                     fig5 = go.Figure(go.Bar(
