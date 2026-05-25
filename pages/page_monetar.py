@@ -60,7 +60,7 @@ def render():
         ipc_mediu_last = df_tna.iloc[-1].get("ipc_mediu", None)
 
     kpi_row([
-        kpi_card("Rezerve BNM",
+        kpi_card("Active oficiale de rezervă",
                  f"{rez_val:,.1f}" if rez_val else "N/A", rez_unit,
                  f"{rez_var:+.1f}% vs {an_prev}" if rez_var else "",
                  rez_var and rez_var > 0, "pink"),
@@ -72,7 +72,7 @@ def render():
                  f"{ipc_mediu_last:.1f}" if ipc_mediu_last else "N/A", "%",
                  f"medie {int(df_tna.iloc[-1]['an']) if has_ipc_mediu else ''}",
                  ipc_mediu_last and ipc_mediu_last < 105, "pink"),
-        kpi_card("Baza monetara (MO)",
+        kpi_card("MO (Bani lichizi în circulație)",
                  f"{baza_val:,.0f}" if baza_val else "N/A", "mil. lei",
                  f"depozite totale: {dep_val/1000:,.1f} mld." if dep_val else "",
                  True, "pink"),
@@ -298,7 +298,7 @@ def render():
         col1, col2 = st.columns(2)
 
         with col1:
-            st.markdown('<div class="chart-card"><div class="chart-card-title">Structura depozitelor bancare (mil. lei) sfirsit de an</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-card"><div class="chart-card-title"> Depozitele bancare (mil. lei) sfirsit de an</div>', unsafe_allow_html=True)
             fig_dep = go.Figure()
             for col_k, name, color in [
                 ("depozite_vedere_mn_mil_lei", "La vedere MN (Monedă națională)",  "#185FA5"),
@@ -468,7 +468,7 @@ def render():
             # st.markdown('<div class="chart-source">Sursa: BNM — Date_Sector_Monetar.xlsx</div></div>', unsafe_allow_html=True)
 
         with col2:
-            st.markdown('<div class="chart-card"><div class="chart-card-title">Structura creditelor noi acordate persoanelor fizice (mil. lei)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-card"><div class="chart-card-title">Creditele noi acordate persoanelor fizice (mil. lei)</div>', unsafe_allow_html=True)
             fig_crf = go.Figure()
             for col_k, name, color in [
                 ("credite_consum_mil_lei",  "Consum",       "#5FC8EE"),
