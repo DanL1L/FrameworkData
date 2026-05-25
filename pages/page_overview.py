@@ -6,7 +6,7 @@ import pandas as pd
 from utils.state import page_header, kpi_card, kpi_row
 from utils.data_loader import sursa_badge
 from utils.api_bns import get_pib_sinteza
-from utils.api_bns_scraper import get_indicatori_cheie
+from utils.api_bns_scraper import get_indicatori_cheie, get_inflatie_ytd
 from utils.api_comert_extern import get_comert_ext_bns, get_comert_ytd_bns
 from data.demo_data import (
     YEARS_STR, export_vals, import_vals,
@@ -110,9 +110,12 @@ def render():
     ) if not df_total.empty else pd.DataFrame()
 
     # ── Indicatori cheie  scraping  ─────────────────────────
-    result_kpi = get_indicatori_cheie()
-    kpi_live   = result_kpi["live"]
-    indicatori = result_kpi["data"]
+    result_kpi  = get_indicatori_cheie()
+    kpi_live    = result_kpi["live"]
+    indicatori  = result_kpi["data"]
+
+    # ── Rata inflatiei YTD (ian-xxx / ian-xxx) de pe pagina dedicata IPC ──────
+    res_inflatie = get_inflatie_ytd()
 
     # st.markdown(sursa_badge(result_kpi), unsafe_allow_html=True)
     # if result_kpi.get("eroare"):
@@ -136,6 +139,16 @@ def render():
                 "color":   _SLOT_COLOR[slot],
                 "pozitiv": _is_pozitiv(ind["valoare"], slot),
             }
+
+    # Suprascrie Rata inflatiei cu valoarea YTD (ian-xxx/ian-xxx) de pe pagina IPC
+    if res_inflatie["live"]:
+        grila[1] = {
+            "titlu":    "Rata inflatiei",
+            "valoare":  res_inflatie["valoare"],
+            "perioada": res_inflatie["perioada"],
+            "color":    _SLOT_COLOR[1],
+            "pozitiv":  _is_pozitiv(res_inflatie["valoare"], 1),
+        }
 
     # Suprascrie Export/Import cu date BNS YTD daca sunt disponibile
     if res_ytd["live"]:
