@@ -23,9 +23,10 @@ from bs4 import BeautifulSoup
 import streamlit as st
 from datetime import datetime
 
-BNS_HOME   = "https://statistica.gov.md/ro"
-TIMEOUT    = 12
-USER_AGENT = (
+BNS_HOME      = "https://statistica.gov.md/ro"
+INFLATIE_URL  = "https://statistica.gov.md/ro/statistic_indicator_details/10"
+TIMEOUT       = 12
+USER_AGENT    = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/124.0.0.0 Safari/537.36"
@@ -209,3 +210,84 @@ def _calc_pozitiv(valoare: str, titlu_norm: str) -> bool:
     if are_minus:
         return not pozitiv_cand_creste
     return True       # valoare absoluta (ex: 2381,3 mii) → mereu verde
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def get_inflatie_ytd() -> dict:
+    """
+    Scrapeaza pagina de detalii IPC (statistic_indicator_details/10) si extrage
+    randul YTD cumulat de forma 'ian-xxx YYYY / ian-xxx YYYY, %'.
+
+    Returneaza:
+      {
+        "valoare":  "+5,6%",                              # IPC - 100 cu semn
+        "perioada": "ian-apr. 2026 / ian-apr. 2025",      # eticheta randul
+        "live":     bool,
+        "ts":       str,
+        "eroare":   str | None,
+      }
+    """
+    ts = datetime.now().strftime("%d.%m.%Y %H:%M")
+
+    try:
+        r = requests.get(
+            INFLATIE_URL,
+            headers={"User-Agent": USER_AGENT},
+            timeout=TIMEOUT,
+        )
+        r.raise_for_status()
+        r.encoding = "utf-8"
+
+        soup = BeautifulSoup(r.text, "html.parser")
+
+        # Tabelul cu valorile IPC are clasa 'tablekeyvalue'
+        tbl = soup.find("table", class_="tablekeyvalue")
+        if not tbl:
+            raise ValueError("Nu s-a gasit table.tablekeyvalue pe pagina IPC")
+
+        # Cauta randul YTD: contine 'ian-' in eticheta (ex: 'ian-apr. 2026 / ian-apr. 2025, %')
+        for row in tbl.find_all("tr"):
+            cells = row.find_all("td")
+            if len(cells) < 2:
+                continue
+            label     = cells[0].get_text(strip=True)
+            value_str = cells[1].get_text(strip=True)
+
+            if "ian-" in label.lower() and value_str:
+                # Elimina sufixul ', %' din eticheta de perioada
+                perioada = label.replace(", %", "").strip()
+
+                # Calculeaza rata inflatiei = IPC - 100
+                ipc  = float(value_str.replace(",", ".").replace("\xa0", "").strip())
+                rata = ipc - 100
+
+                # Formateaza cu separator zecimal romanesc si semn
+                rata_fmt = f"{rata:.1f}".replace(".", ",")
+                valoare  = f"+{rata_fmt}%" if rata >= 0 else f"{rata_fmt}%"
+
+                return {
+                    "valoare":  valoare,
+                    "perioada": perioada,
+                    "live":     True,
+                    "ts":       ts,
+                    "eroare":   None,
+                }
+
+        raise ValueError("Randul 'ian-' nu a fost gasit in tabelul IPC")
+
+    except requests.exceptions.ConnectionError:
+        eroare = "Conexiune esuata — statistica.gov.md inaccesibil"
+    except requests.exceptions.Timeout:
+        eroare = f"Timeout dupa {TIMEOUT}s"
+    except requests.exceptions.HTTPError as e:
+        eroare = f"HTTP {e.response.status_code}"
+    except Exception as e:
+        eroare = f"Eroare inflatie: {e}"
+
+    return {
+        "valoare":  "+5,6%",
+        "perioada": "ian-apr. 2026 / ian-apr. 2025",
+        "live":     False,
+        "ts":       ts,
+        "eroare":   eroare,
+    }
