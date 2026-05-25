@@ -133,6 +133,21 @@ def _load_datorie() -> dict:
         return {"ok": False, "eroare": str(e)}
 
 
+@st.cache_data(ttl=300, show_spinner=False)
+def _load_finpub_trim() -> dict:
+    """FinPub_Trim.xlsx — sheet: Date. Coloane: An, Trimestru, Venituri, Cheltuieli (%)."""
+    path = _find("FinPub_Trim.xlsx")
+    if path is None:
+        return {"ok": False, "eroare": "FinPub_Trim.xlsx negasit in /data"}
+    try:
+        df = pd.read_excel(path, sheet_name="Date")
+        df = df.dropna(subset=["Venituri", "Cheltuieli"])
+        df["label"] = df["An"].astype(str) + "/" + df["Trimestru"].astype(str)
+        return {"ok": True, "data": df}
+    except Exception as e:
+        return {"ok": False, "eroare": str(e)}
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _pct_pib(df: pd.DataFrame, indicator: str, ani: list) -> list:
@@ -169,6 +184,7 @@ def render():
     vc       = _load_vc()
     res_bns  = get_buget_trim_bns()
     df_bns   = res_bns["data"]
+    trim_res = _load_finpub_trim()
     bpn_ok   = bpn["ok"]
     dat_ok   = dat_res["ok"]
     vc_ok    = vc["ok"]
@@ -226,8 +242,8 @@ def render():
                  "sub pragul UE de 60%", dat_last < 60, "amber"),
     ])
 
-    tab1, tab2, tab3 = st.tabs([
-        "Executie bugetara", "Structura BPN", "Datorie publică"
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "Executie bugetara", "Structura BPN", "Datorie publică", "Evolutie trimestriala"
     ])
 
     def _layout(h=300):
@@ -740,3 +756,60 @@ def render():
             })
         st.dataframe(fis_tbl, use_container_width=True, hide_index=True)
         st.markdown('<div class="chart-source">Sursa: MinFin</div></div>', unsafe_allow_html=True)
+
+    # ── Tab 4: Evolutie trimestriala ──────────────────────────────────────────
+    with tab4:
+        if not trim_res["ok"]:
+            st.warning(f"FinPub_Trim.xlsx indisponibil: {trim_res.get('eroare','')}")
+        else:
+            df_trim = trim_res["data"]
+            labels  = df_trim["label"].tolist()
+            ven     = df_trim["Venituri"].round(2).tolist()
+            chelt   = df_trim["Cheltuieli"].round(2).tolist()
+            sold    = [round(v - c, 2) for v, c in zip(ven, chelt)]
+
+            # ── Grafic 1: Venituri vs Cheltuieli pe trimestre ─────────────────
+            st.markdown('<div class="chart-card"><div class="chart-card-title">Venituri si cheltuieli trimestriale (%) · 2019–2026</div>', unsafe_allow_html=True)
+            fig_t1 = go.Figure()
+            fig_t1.add_trace(go.Bar(
+                name="Venituri", x=labels, y=ven,
+                marker_color="#1D9E75", opacity=0.85,
+                hovertemplate="Venituri <b>%{x}</b>: %{y:+.2f}%<extra></extra>",
+            ))
+            fig_t1.add_trace(go.Bar(
+                name="Cheltuieli", x=labels, y=chelt,
+                marker_color="#E24B4A", opacity=0.75,
+                hovertemplate="Cheltuieli <b>%{x}</b>: %{y:+.2f}%<extra></extra>",
+            ))
+            fig_t1.add_hline(y=0, line_color="#e8e4dc", line_width=1)
+            fig_t1.update_layout(**{
+                **_layout(320),
+                "barmode": "group",
+                "showlegend": True,
+                "xaxis": dict(showgrid=False, linecolor="#e8e4dc",
+                              tickfont=dict(size=9), tickangle=-45),
+                "yaxis": dict(gridcolor="#f1efe8", tickfont=dict(size=10),
+                              zeroline=False, title="%"),
+            })
+            st.plotly_chart(fig_t1, use_container_width=True, config={"displayModeBar": False})
+
+            # ── Grafic 2: Sold trimestrial (Venituri − Cheltuieli) ────────────
+            st.markdown('<div class="chart-card"><div class="chart-card-title">Sold trimestrial (Venituri − Cheltuieli, pp)</div>', unsafe_allow_html=True)
+            colors_sold = ["#1D9E75" if v >= 0 else "#E24B4A" for v in sold]
+            fig_t2 = go.Figure(go.Bar(
+                x=labels, y=sold,
+                marker_color=colors_sold, opacity=0.88,
+                text=[f"{v:+.2f}" for v in sold],
+                textposition="outside",
+                textfont=dict(size=8, color="#444441"),
+                hovertemplate="Sold <b>%{x}</b>: %{y:+.2f} pp<extra></extra>",
+            ))
+            fig_t2.add_hline(y=0, line_color="#444441", line_width=1)
+            fig_t2.update_layout(**{
+                **_layout(280),
+                "xaxis": dict(showgrid=False, linecolor="#e8e4dc",
+                              tickfont=dict(size=9), tickangle=-45),
+                "yaxis": dict(gridcolor="#f1efe8", tickfont=dict(size=10),
+                              zeroline=False, title="puncte procentuale"),
+            })
+            st.plotly_chart(fig_t2, use_container_width=True, config={"displayModeBar": False})
