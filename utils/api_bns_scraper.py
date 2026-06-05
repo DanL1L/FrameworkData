@@ -18,14 +18,17 @@ Fiecare element <a class="itemkey"> contine 3 <div>:
 Cache: ttl=3600 (refresh automat la fiecare ora)
 """
 
+import re
 import requests
 from bs4 import BeautifulSoup
 import streamlit as st
 from datetime import datetime
 
-BNS_HOME      = "https://statistica.gov.md/ro"
-INFLATIE_URL  = "https://statistica.gov.md/ro/statistic_indicator_details/10"
-TIMEOUT       = 12
+BNS_HOME          = "https://statistica.gov.md/ro"
+INFLATIE_URL      = "https://statistica.gov.md/ro/statistic_indicator_details/10"
+PIATA_MUNCII_URL  = "https://statistica.gov.md/ro/statistic_indicator_details/1"
+SALARIU_URL       = "https://statistica.gov.md/ro/statistic_indicator_details/2"
+TIMEOUT           = 12
 USER_AGENT    = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -291,3 +294,204 @@ def get_inflatie_ytd() -> dict:
         "ts":       ts,
         "eroare":   eroare,
     }
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _norm_label(s: str) -> str:
+    """Normalizeaza diacritice la ASCII simplu, lowercase — pentru matching robust."""
+    return (s.lower()
+            .replace("ș", "s").replace("ş", "s")
+            .replace("ț", "t").replace("ţ", "t")
+            .replace("ă", "a").replace("î", "i").replace("â", "a"))
+
+
+def _parse_ro_float(val_str: str) -> float | None:
+    """Converteste "15 987,1" sau "10,4" (format romanesc) la float."""
+    try:
+        cleaned = val_str.strip().replace("\xa0", "").replace(" ", "").replace(" ", "").replace(",", ".")
+        return float(cleaned) if cleaned else None
+    except (ValueError, AttributeError):
+        return None
+
+
+# ── Piata muncii trimestrial (indicatori_details/1) ───────────────────────────
+
+_FALLBACK_PM_TRIM = {
+    "perioada":       "Trim. I 2026",
+    "pop_ocupata_mii": 811.1,
+    "someri_bim_mii":  93.6,
+    "rata_somaj_bim":  10.4,
+}
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def get_piata_muncii_trim_scraper() -> dict:
+    """
+    Scrapeaza statistic_indicator_details/1:
+      - Perioada (ex: "Trim. I 2026")
+      - Populatie ocupata (mii pers.)
+      - Someri BIM (mii pers.)
+      - Rata somajului BIM (%)
+
+    Returneaza:
+      {"perioada", "pop_ocupata_mii", "someri_bim_mii", "rata_somaj_bim",
+       "live", "sursa", "ts", "eroare"}
+    """
+    ts = datetime.now().strftime("%d.%m.%Y %H:%M")
+    eroare = None
+
+    try:
+        r = requests.get(PIATA_MUNCII_URL, headers={"User-Agent": USER_AGENT}, timeout=TIMEOUT)
+        r.raise_for_status()
+        r.encoding = "utf-8"
+        soup = BeautifulSoup(r.text, "html.parser")
+
+        # Perioada din primul div.font-18 > b
+        perioada = ""
+        div_p = soup.find("div", class_="font-18")
+        if div_p:
+            b_tag = div_p.find("b")
+            perioada = (b_tag or div_p).get_text(strip=True)
+
+        result = {
+            "perioada":        perioada,
+            "pop_ocupata_mii": None,
+            "someri_bim_mii":  None,
+            "rata_somaj_bim":  None,
+        }
+
+        tbl = soup.find("table", class_="tablekeyvalue")
+        if tbl:
+            for row in tbl.find_all("tr"):
+                cells = row.find_all("td")
+                if len(cells) < 2:
+                    continue
+                label = _norm_label(cells[0].get_text(strip=True))
+                val   = _parse_ro_float(cells[1].get_text(strip=True))
+                if val is None:
+                    continue
+                if "populatie ocupata" in label:
+                    result["pop_ocupata_mii"] = val
+                elif "someri bim" in label:
+                    result["someri_bim_mii"] = val
+                elif "rata" in label and "somajului" in label:
+                    result["rata_somaj_bim"] = val
+
+        if result["pop_ocupata_mii"] is not None or result["rata_somaj_bim"] is not None:
+            return {**result, "live": True,
+                    "sursa": "statistica.gov.md · indicatori/1", "ts": ts, "eroare": None}
+
+        raise ValueError("Date piata muncii negasite in pagina")
+
+    except requests.exceptions.ConnectionError:
+        eroare = "Conexiune esuata — statistica.gov.md inaccesibil"
+    except requests.exceptions.Timeout:
+        eroare = f"Timeout dupa {TIMEOUT}s"
+    except requests.exceptions.HTTPError as e:
+        eroare = f"HTTP {e.response.status_code}"
+    except Exception as e:
+        eroare = str(e)
+
+    return {**_FALLBACK_PM_TRIM, "live": False,
+            "sursa": "statistica.gov.md (fallback)", "ts": ts, "eroare": eroare}
+
+
+# ── Salariu trimestrial (indicatori_details/2) ────────────────────────────────
+
+_FALLBACK_SAL_TRIM_SCRAPER = {
+    "perioada":        "Trim. I 2026",
+    "salariu_total":   15987.1,
+    "salariu_bugetar": 13287.9,
+    "salariu_real":    16909.6,
+    "salariu_anual":   15472.1,
+    "an_salariu":      2025,
+}
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def get_salariu_trim_scraper() -> dict:
+    """
+    Scrapeaza statistic_indicator_details/2:
+      - Perioada (ex: "Trim. I 2026")
+      - Castigul salarial mediu lunar brut: total, sector bugetar, sector real (lei)
+
+    Returneaza:
+      {"perioada", "salariu_total", "salariu_bugetar", "salariu_real",
+       "live", "sursa", "ts", "eroare"}
+    """
+    ts = datetime.now().strftime("%d.%m.%Y %H:%M")
+    eroare = None
+
+    try:
+        r = requests.get(SALARIU_URL, headers={"User-Agent": USER_AGENT}, timeout=TIMEOUT)
+        r.raise_for_status()
+        r.encoding = "utf-8"
+        soup = BeautifulSoup(r.text, "html.parser")
+
+        result = {
+            "perioada":        "",
+            "salariu_total":   None,
+            "salariu_bugetar": None,
+            "salariu_real":    None,
+            "salariu_anual":   None,
+            "an_salariu":      None,
+        }
+
+        tbl = soup.find("table", class_="tablekeyvalue")
+        if tbl:
+            in_trim_section = False
+            for row in tbl.find_all("tr"):
+                cells = row.find_all("td")
+                if not cells:
+                    continue
+
+                b_tag  = cells[0].find("b")
+                b_text = b_tag.get_text(strip=True) if b_tag else ""
+
+                # Randul de perioada: <b>Trim. I 2026, lei</b>
+                if b_tag and "trim." in b_text.lower():
+                    result["perioada"] = b_text.replace(", lei", "").replace(",lei", "").strip()
+                    in_trim_section = True
+                    continue
+
+                if len(cells) < 2:
+                    continue
+
+                label = _norm_label(cells[0].get_text(strip=True))
+                val   = _parse_ro_float(cells[1].get_text(strip=True))
+                if val is None:
+                    continue
+
+                # Randuri trimestru curent (total / sector bugetar / sector real)
+                if in_trim_section:
+                    if label == "total":
+                        result["salariu_total"] = val
+                    elif "bugetar" in label:
+                        result["salariu_bugetar"] = val
+                    elif label == "sector real":
+                        result["salariu_real"] = val
+
+                # Randul anual: "Anul 2025, lei"
+                m = re.search(r"anul\s+(\d{4})", label)
+                if m:
+                    result["salariu_anual"] = val
+                    result["an_salariu"]    = int(m.group(1))
+
+        if result["salariu_total"] is not None:
+            return {**result, "live": True,
+                    "sursa": "statistica.gov.md · indicatori/2", "ts": ts, "eroare": None}
+
+        raise ValueError("Date salariale negasite in pagina")
+
+    except requests.exceptions.ConnectionError:
+        eroare = "Conexiune esuata — statistica.gov.md inaccesibil"
+    except requests.exceptions.Timeout:
+        eroare = f"Timeout dupa {TIMEOUT}s"
+    except requests.exceptions.HTTPError as e:
+        eroare = f"HTTP {e.response.status_code}"
+    except Exception as e:
+        eroare = str(e)
+
+    return {**_FALLBACK_SAL_TRIM_SCRAPER, "live": False,
+            "sursa": "statistica.gov.md (fallback)", "ts": ts, "eroare": eroare}
