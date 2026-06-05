@@ -22,6 +22,7 @@ from utils.api_social import (
     get_salarii_trim_bns,
     get_ocupare_trim_bns,
 )
+from utils.api_bns_scraper import get_piata_muncii_trim_scraper, get_salariu_trim_scraper
 
 
 def render():
@@ -88,54 +89,49 @@ def render():
     #     st.markdown(sursa_badge(badge_api), unsafe_allow_html=True)
     # st.markdown("")
 
-    # ── KPI — din trimestrale (ultimul trimestru disponibil) ──────────────────
+    # ── KPI — date scraper statistica.gov.md (primar) + BNS anual ───────────────
+    res_pm_s  = get_piata_muncii_trim_scraper()
+    res_sal_s = get_salariu_trim_scraper()
+
+    rata_somaj_kpi  = res_pm_s.get("rata_somaj_bim")
+    pop_ocupata_kpi = res_pm_s.get("pop_ocupata_mii")
+    perioada_pm     = res_pm_s.get("perioada", "")
+
+    salariu_kpi    = res_sal_s.get("salariu_total")
+    perioada_sal   = res_sal_s.get("perioada", "")
+    sal_anual_kpi  = res_sal_s.get("salariu_anual")
+    an_sal_kpi     = res_sal_s.get("an_salariu")
+
+    # Fallback trim_label pentru carduri fara scraper
     if not df_q.empty:
-        last = df_q.iloc[-1]
-        prev_yr = df_q[df_q["an"] == (int(last["an"]) - 1)]
-        prev = prev_yr.iloc[-1] if not prev_yr.empty else (
-            df_q.iloc[-2] if len(df_q) >= 2 else last
-        )
-
-        somaj_val  = last.get("rata_somaj_pct",   None)
-        somaj_prev = prev.get("rata_somaj_pct",   None)
-        somaj_var  = round(somaj_val - somaj_prev, 1) if somaj_val and somaj_prev else None
-
-        sal_val    = last.get("salariu_mediu_mdl", None)
-        sal_prev   = prev.get("salariu_mediu_mdl", None)
-        sal_var    = ((sal_val - sal_prev) / sal_prev * 100) if sal_val and sal_prev and sal_prev != 0 else None
-
-        pop_val    = last.get("populatie_ocupata_mii", None)
-        ocupare_val= last.get("rata_ocupare_pct",      None)
+        last       = df_q.iloc[-1]
         trim_label = last.get("trim_label", str(int(last["an"])))
     else:
-        somaj_val = somaj_var = sal_val = sal_var = pop_val = ocupare_val = None
         trim_label = "N/A"
 
-    # KPI din anuale pentru castig salarial (ultimul an BNS)
+    # Fallback an_sal folosit in tab anual (BNS API)
     if not df_sal.empty and "total" in df_sal.columns:
-        sal_an_last = df_sal.iloc[-1]["total"]
-        sal_an_prev = df_sal.iloc[-2]["total"] if len(df_sal) >= 2 else None
-        sal_an_var  = ((sal_an_last - sal_an_prev) / sal_an_prev * 100) if sal_an_prev else None
-        an_sal      = int(df_sal.iloc[-1]["an"])
+        an_sal = int(df_sal.iloc[-1]["an"])
     else:
-        sal_an_last = sal_an_var = None; an_sal = 2024
+        an_sal = 2024
 
     kpi_row([
         kpi_card("Rata somajului",
-                 f"{somaj_val:.1f}" if somaj_val else "N/A", "%",
-                 f"{somaj_var:+.1f}pp vs an anterior" if somaj_var else trim_label,
-                 somaj_var is not None and somaj_var <= 0, "teal"),
-        kpi_card("Salariu mediu (trim.)",
-                 f"{sal_val:,.0f}" if sal_val else "N/A", "MDL",
-                 f"{sal_var:+.1f}% vs an anterior" if sal_var else trim_label,
-                 sal_var is not None and sal_var > 0, "teal"),
-        kpi_card(f"Castig salarial {an_sal} (BNS)",
-                 f"{sal_an_last:,.0f}" if sal_an_last else "N/A", "MDL",
-                 f"{sal_an_var:+.1f}% vs {an_sal-1}" if sal_an_var else "",
-                 sal_an_var is not None and sal_an_var > 0, "teal"),
+                 f"{rata_somaj_kpi:.1f}" if rata_somaj_kpi is not None else "N/A", "%",
+                 perioada_pm or trim_label,
+                 rata_somaj_kpi is not None and rata_somaj_kpi < 10, "teal"),
         kpi_card("Populatie ocupata",
-                 f"{pop_val:,.1f}" if pop_val else "N/A", "mii pers.",
-                 f"trim. {trim_label}", True, "teal"),
+                 f"{pop_ocupata_kpi:,.1f}" if pop_ocupata_kpi is not None else "N/A", "mii pers.",
+                 perioada_pm or trim_label,
+                 True, "teal"),
+        kpi_card("Salariu mediu brut",
+                 f"{salariu_kpi:,.0f}" if salariu_kpi is not None else "N/A", "lei",
+                 perioada_sal or trim_label,
+                 True, "teal"),
+        kpi_card(f"Castig salarial {an_sal_kpi or an_sal} (anual)",
+                 f"{sal_anual_kpi:,.0f}" if sal_anual_kpi is not None else "N/A", "lei",
+                 f"Anul {an_sal_kpi}" if an_sal_kpi else "",
+                 True, "teal"),
     ])
 
     # ── Tabs ──────────────────────────────────────────────────────────────────
