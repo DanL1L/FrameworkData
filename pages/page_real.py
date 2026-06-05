@@ -756,8 +756,8 @@ def render():
             err_creg = res_cult_reg.get("eroare", "")
             err_areg = res_anim_reg.get("eroare", "")
             st.warning(
-                f"Date teritoriale indisponibile. "
-                f"Culturi: {err_creg or 'N/A'} | Animale: {err_areg or 'N/A'}"
+                f"Trebuie sa verific. "
+                f"{err_creg or 'N/A'} {err_areg or 'N/A'}"
             )
             if st.button("Reincarca", key="reload_teritorial"):
                 get_culturi_regionale_bns.clear()
