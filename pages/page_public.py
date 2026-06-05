@@ -173,7 +173,7 @@ CULORI_CHELT = ["#0D2B6B","#1A4FA0","#2D6EC8","#5B9BD5","#8CB4E1","#B8D4EE","#D9
 def render():
     page_header(
         "Sectorul Public",
-        "Finante publice, executie bugetara BPN, datorie publică· 2019–2025",
+        "Finante publice, datorie publică· 2019–2025",
         "Ministerul Finantelor — Executie bugetara",
         "amber"
     )
