@@ -742,7 +742,7 @@ def render():
                            title="mii capete"),
             )
             st.plotly_chart(fig_efect, use_container_width=True, config={"displayModeBar": False})
-            # st.markdown(f'<div class="chart-source">Sursa: BNS AGR030100 ({res_efectiv["ts"]})</div></div>', unsafe_allow_html=True)
+            # st.markdown(f'<div class="chart-source">Sursa: BNS ({res_efectiv["ts"]})</div></div>', unsafe_allow_html=True)
 
         st.markdown("---")
 
