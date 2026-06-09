@@ -744,7 +744,7 @@ def render():
             st.plotly_chart(fig_efect, use_container_width=True, config={"displayModeBar": False})
             # st.markdown(f'<div class="chart-source">Sursa: BNS ({res_efectiv["ts"]})</div></div>', unsafe_allow_html=True)
 
-        st.markdown("---")
+        # st.markdown("---")
 
         # # ── Profil teritorial ────────────────────────────────────────────────
         # st.markdown("#### Profil teritorial")
